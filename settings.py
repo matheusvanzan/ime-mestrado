@@ -11,8 +11,10 @@ PATH_PROJECT = '/content/drive/Shareddrives/GPTJ/project/'
 PATH_DATA = '/content/drive/Shareddrives/GPTJ/data/'
 
 PATH_DATA_KAGGLE = os.path.join(PATH_DATA, 'kaggle')
-PATH_DATA_ASM = os.path.join(PATH_DATA_KAGGLE, 'asm')
 
+PATH_DATA_LABELS = os.path.join(PATH_DATA_KAGGLE, 'trainLabels.csv')
+
+PATH_DATA_ASM = os.path.join(PATH_DATA_KAGGLE, 'asm')
 PATH_DATA_PROC_1 = os.path.join(PATH_DATA_KAGGLE, 'proc-1')
 PATH_DATA_PROC_2 = os.path.join(PATH_DATA_KAGGLE, 'proc-2')
 PATH_DATA_PROC_3 = os.path.join(PATH_DATA_KAGGLE, 'proc-3')
