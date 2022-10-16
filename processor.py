@@ -112,7 +112,7 @@ class Processor:
         path_proc = os.path.join(self.path_data_proc, 'all', filename)
         
         if os.path.exists(path_proc):
-            pass #print(f'{i}/{total}: skip {filename}')
+            print(f'{i}/{total}: skip {filename}')
 
         else:
             print(f'{i}/{total}: start {filename}')
@@ -134,13 +134,37 @@ class Processor:
         print('split_by_label')
 
         content = pd.read_csv(self.path_data_labels)
+        total = len(content)
+        i = 1
         for id_, label in zip(content['Id'], content['Class']):
             old_path = os.path.join(self.path_data_proc, 'all', f'{id_}.asm')
             new_path = os.path.join(self.path_data_proc, str(label), f'{id_}.asm')
-            print(old_path)
-            print(new_path)
-            shutil.copyfile(old_path, new_path)
-            print('--')
+
+            if os.path.exists(new_path):
+                print(f'{i}/{total}: skip {label}/{id_}')
+
+            else:
+                print(f'{i}/{total}: start {label}/{id_}')
+                shutil.copyfile(old_path, new_path)
+                print('--')
+
+            i += 1
+
+    def sanity_check(self):
+
+        content = pd.read_csv(self.path_data_labels)
+        total = len(content)
+        i = 1
+        for id_, label in zip(content['Id'], content['Class']):
+            new_path = os.path.join(self.path_data_proc, str(label), f'{id_}.asm')
+
+            with open(new_path, 'r') as f:
+                content = f.read()
+
+                if len(content) == 0:
+                    print(f'{label} - {id_}.asm')
+
+
 
 
 

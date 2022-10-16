@@ -1,0 +1,15 @@
+! cd $PATH_PROJECT && python main.py --process
+
+1 - 58kxhXouHzFd4g3rmInB.asm
+1 - 6tfw0xSL2FNHOCJBdlaA.asm
+1 - a9oIzfw03ED4lTBCt52Y.asm
+1 - BMJR7dhFxIZoQUXpKTDa.asm
+1 - cf4nzsoCmudt1kwleOTI.asm
+1 - d0iHC6ANYGon7myPFzBe.asm
+1 - da3XhOZzQEbKVtLgMYWv.asm
+1 - fRLS3aKkijp4GH0Ds6Pv.asm
+1 - IidxQvXrlBkWPZAfcqKT.asm
+
+2 - 1x2u5Ws7tzFRAgyqoJBV.asm
+2 - i4f81CyIkZtEprWaOVRS.asm
+
