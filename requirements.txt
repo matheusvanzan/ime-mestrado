@@ -2,4 +2,4 @@ git+https://github.com/huggingface/transformers.git
 accelerate==0.12.0
 bitsandbytes==0.34.0
 sentence-transformers==2.2.2
-datasets
+evaluate==0.3.0

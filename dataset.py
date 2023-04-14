@@ -3,11 +3,25 @@ import torch
 torch.manual_seed(42)
 import pickle
 import pandas as pd
+import itertools
 
 from torch.utils.data import Dataset, random_split
 from sys import getsizeof
 
 import settings
+
+
+def leakage_check(l1, l2, l3):
+    # print('leakage_check')
+    # print(len(l1), len(l2), len(l3))
+
+    i12 = set.intersection(set(l1), set(l2))
+    i13 = set.intersection(set(l1), set(l3))
+    i23 = set.intersection(set(l2), set(l3))
+    
+    if len(i12) + len(i13) + len(i23) > 0:
+        raise Exception('DATA LEAK')
+
 
 
 def get_chunks(list_, window, fill=None, limit=None):
@@ -37,55 +51,84 @@ def get_chunks(list_, window, fill=None, limit=None):
 def getsizeof_gb(x):
     return round(getsizeof(x)/(1024*1024), 2)
 
+def custom_one_hot_encoder(n, total):
+    return [0]*n + [1] + [0]*(total-n-1)
 
 class DirectoryDataset(Dataset):
 
-    def __init__(self, tokenizer, path, split_name, list_dir, use_cache):
+    def __init__(self, tokenizer, label, label_0, path, split_name, list_dir, limit, fold, use_cache):
 
-        self.limit = settings.DATASET_LIMIT
         self.tokenizer = tokenizer
-        self.path = path
+        self.label = label
+        self.label_0 = label_0
+        self.path = os.path.join(path, label)        
         self.split_name = split_name
         self.list_dir = list_dir
+        self.limit = limit
+        self.fold = fold
 
         self.use_cache = use_cache
 
         self.chunk_size = settings.DATASET_CHUNK_SIZE
         self.chunks = []
 
-        self.path_csv = f'{path}.{split_name}.limit-{self.limit}.chunk-{self.chunk_size}.csv'
+        # multiclass
+        if self.label_0 == 'all':
+            self.label_id = torch.tensor ( int(self.label) )
+
+        # binary
+        else:
+            if str(self.label_0) == str(self.label): # if ref model
+                self.label_id = torch.tensor( 0 )
+            else:
+                self.label_id = torch.tensor( 1 )
+
+        print(f'Dataset: label {self.label} - {self.split_name} - in model as torch.tensor({self.label_id})')
+
+        self.path_csv = f'{self.path}.limit-{self.limit}.fold-{self.fold}.chunk-{self.chunk_size}.{self.split_name}.csv'
 
         self._create_csv() # if not in file already
         self._create_input_ids()
 
-    def _tokenize_chunks(self, content):
+    def _tokenize_chunks(self, content, filename):
         '''
             content: f.read() of all files in the Directory
-
-            here we can limit files content (by word count or token count)
+            we can limit here files content (by word count or token count)
         '''
         tokens = self.tokenizer(content)
         # tokens = {'input_ids': [...], 'attention_mask': [...]}
 
-        # TODO: change limit to here
-        # TODO: add optional first and last words in get_chunks
+        start_token = self.tokenizer(self.tokenizer.bos_token)
+        end_token = self.tokenizer(self.tokenizer.eos_token)
+        pad_token = self.tokenizer(self.tokenizer.pad_token)
 
-        start_token = self.tokenizer('<|startoftext|>')
-        end_token = self.tokenizer('<|endoftext|>')
-        pad_token = self.tokenizer('<|pad|>')
+        input_ids = tokens['input_ids']
+        attention_mask = tokens['attention_mask']
+
+        # if len(input_ids) > self.limit:
+        #     print(f'Warning: truncating ({len(input_ids)} > {self.limit})')
+
+        #### TEMP
+        # len_ = len(input_ids)
+        # # print('len(input_ids)', self.label, self.split_name, filename, len_)
+        # with open(f'tokens.csv', 'a+') as f:
+        #     f.write(f'{self.label},{self.split_name},{filename},{len_}\n')
+        ### END TEMP
+
+        if self.limit != 'all':
+            input_ids = input_ids[:self.limit]
+            attention_mask = attention_mask[:self.limit]
 
         input_id_chunks = get_chunks(
-            list_ = start_token['input_ids'] + tokens['input_ids'][:self.limit] + end_token['input_ids'],
+            list_ = input_ids, # start_token['input_ids'] + input_ids + end_token['input_ids'],
             window = self.chunk_size, 
-            fill = pad_token['input_ids'][0],
-            limit = self.limit
+            fill = pad_token['input_ids'][0]
         )
 
         mask_chunks = get_chunks(
-            list_ = start_token['attention_mask'] + tokens['attention_mask'][:self.limit] + end_token['attention_mask'],
+            list_ = attention_mask, # start_token['attention_mask'] + attention_mask + end_token['attention_mask'],
             window = self.chunk_size, 
-            fill = pad_token['attention_mask'][0],
-            limit = self.limit
+            fill = pad_token['attention_mask'][0]
         )
 
         ### CAN'T PRINT list(generator)
@@ -97,11 +140,11 @@ class DirectoryDataset(Dataset):
     def _create_csv(self):
 
         if self.use_cache and os.path.isfile(self.path_csv):
-            print(f'Dataset: {self.split_name} - loading from {self.path_csv} ...')
+            print(f'Dataset: label {self.label} - {self.split_name} - loading from {self.path_csv} ...')
 
         else:
-            print(f'Dataset: {self.split_name} - creating from {self.path} ...')
-            print(f'Dataset: {self.split_name} - {len(self.list_dir)} files')
+            print(f'Dataset: label {self.label} - {self.split_name} - creating from {self.path} ...')
+            print(f'Dataset: label {self.label} - {self.split_name} - {len(self.list_dir)} files')
 
             # create .csv
             with open(self.path_csv, 'w+') as file_csv:
@@ -112,28 +155,37 @@ class DirectoryDataset(Dataset):
             for i, filename in enumerate(self.list_dir):
                 filepath = os.path.join(self.path, filename)
 
+                fileid = filename.split('.')[0]
+
                 with open(filepath, 'r') as f:
                     content = f.read()
 
                 # write chunks
-                input_id_chunks, mask_chunks = self._tokenize_chunks(content)
-                for input_ids, mask in zip(input_id_chunks, mask_chunks):
-                    with open(self.path_csv, 'a') as file_csv:
-                        line = ','.join([str(i) for i in input_ids + mask])
+                with open(self.path_csv, 'a') as file_csv:
+                    input_id_chunks, mask_chunks = self._tokenize_chunks(content, filename)
+                    for input_ids, mask in zip(input_id_chunks, mask_chunks):                    
+                        line = fileid + ','
+                        line += ','.join([str(i) for i in input_ids + mask])
                         line += '\n'
                         file_csv.write(line)
 
                 if len_list_dir > 10 and i % (int(len_list_dir/10)) == 0:
-                    print(f'Dataset: {self.split_name} - {int(100*i/len_list_dir)}%')
+                    print(f'Dataset: label {self.label} - {self.split_name} - {int(100*i/len_list_dir)}%')
 
-            print(f'Dataset: {self.split_name} - saved at {self.path_csv}')
+            print(f'Dataset: label {self.label} - {self.split_name} - saved at {self.path_csv}')
 
     def _create_input_ids(self):
 
         with open(self.path_csv, 'r') as f:
             self.chunks = f.readlines()
 
-        print(f'Dataset: {self.split_name} - {len(self.chunks)} chunks - {getsizeof_gb(self.chunks)} Gb')
+        print(f'Dataset: label {self.label} - {self.split_name} - {len(self.chunks)} chunks - {getsizeof_gb(self.chunks)} Gb')
+
+    def getfile(self, idx):
+        chunk = self.chunks[idx]
+        chunk_list = [x for x in chunk.split(',')]
+        file_id = chunk_list[0]
+        return file_id
 
     def __len__(self):
         if not self.tokenizer:
@@ -146,43 +198,98 @@ class DirectoryDataset(Dataset):
             raise Exception('tokenizer not set')
 
         chunk = self.chunks[idx]
-        chunk_int = [int(x) for x in chunk.split(',')]
+        chunk_list = [x for x in chunk.split(',')]
+
+        file_id = chunk_list[0]
+        chunk_int = [int(x) for x in chunk_list[1:]]
 
         input_ids = torch.tensor( chunk_int[:self.chunk_size] )
         attn_mask = torch.tensor( chunk_int[self.chunk_size:] )
-        return input_ids, attn_mask
-
+        
+        return file_id, input_ids, attn_mask, self.label_id
 
 
 class DatasetHelper:
 
-    def __init__(self, tokenizer, label, path, limit, use_cache=True):
+    def __init__(self, tokenizer, labels, label_0, path, limit, fold, use_cache=True):
 
         self.tokenizer = tokenizer
-        self.path = path
+        self.labels = labels
+        self.label_0 = label_0
+        self.path = path # proc-1
+        self.limit = limit
+        self.fold = fold
         self.use_cache = use_cache
+        
+        self.list_dir = {
+            'train': [None]*len(labels),
+            'eval' : [None]*len(labels),
+            'test' : [None]*len(labels)
+        }
 
-        list_dir = os.listdir(path)
-        len_10 = int(0.1 * len(list_dir))
-        len_80 = len(list_dir) - 2*len_10
+        for i, label in enumerate(self.labels):
+            print('-----')
+            print('label', i)
 
-        # if limit:
-        #     self.list_dir = self.list_dir[:self.limit]
-        #     self.path_csv = path + f'.limit-{limit}.csv'
+            # NO K-FOLD
+            os_list_dir = os.listdir(os.path.join(path, label))
+            len_10 = int(0.1 * len(os_list_dir))
+            len_80 = len(os_list_dir) - 2*len_10
 
-        self.train_list_dir, \
-        self.eval_list_dir, \
-        self.test_list_dir = random_split(list_dir, [len_80, len_10, len_10])
+            # print('NO K-FOLD')
+            # self.list_dir['train'][i], \
+            # self.list_dir['eval'][i], \
+            # self.list_dir['test'][i] = random_split(os_list_dir, [len_80, len_10, len_10])            
+            
+            # WITH K-FOLD
+            splits = random_split(os_list_dir, [len(os_list_dir) - 9*len_10] + 9*[len_10])
+
+            # print('WITH K-FOLD')
+            fold_0 = self.fold - 1
+
+            splits_shifted = splits[fold_0:] + splits[:fold_0]
+
+            splits_train = [ splits_shifted[i] for i in range(8) ]
+            splits_eval = splits_shifted[8]
+            splits_test = splits_shifted[9]
+
+            self.list_dir['train'][i] = list(itertools.chain.from_iterable( splits_train ))
+            self.list_dir['eval'][i]  = splits_eval
+            self.list_dir['test'][i]  = splits_test
+
+            # for split in ['train', 'eval', 'test']:
+            #     print('  ', split, '-', len(self.list_dir[split][i]), '-', self.list_dir[split][i][0], '...', self.list_dir[split][i][-1])
+
+            leakage_check(
+                self.list_dir['train'][i],
+                self.list_dir['eval'][i],
+                self.list_dir['test'][i]
+            )
 
 
-    def _get_dataset(self, split):
-        return DirectoryDataset(
-            self.tokenizer, 
-            self.path, 
-            split, 
-            self.train_list_dir, 
-            self.use_cache
-        )
+    def _get_dataset(self, split_name):
+        # tokenizer, label, path, split_name, list_dir, use_cache
+
+        dataset = None
+        for i, label in enumerate(self.labels):
+            dd = DirectoryDataset(
+                tokenizer = self.tokenizer,
+                label = label,
+                label_0 = self.label_0,
+                path = self.path,
+                split_name = split_name, 
+                list_dir = self.list_dir[split_name][i],
+                limit = self.limit,
+                fold = self.fold,
+                use_cache = self.use_cache
+            )
+
+            if not dataset:
+                dataset = dd
+            else:
+                dataset += dd
+
+        return dataset
 
     def get_train(self):
         return self._get_dataset('train')
@@ -193,29 +300,8 @@ class DatasetHelper:
     def get_test(self):
         return self._get_dataset('test')
 
-def get_dataset(tokenizer, label, path, limit, use_cache=True):
-    
-    list_dir = os.listdir(path)
-    len_10 = int(0.1 * len(list_dir))
-    len_80 = len(list_dir) - 2*len_10
-
-    # if limit:
-    #     self.list_dir = self.list_dir[:self.limit]
-    #     self.path_csv = path + f'.limit-{limit}.csv'
-
-    train_list_dir, eval_list_dir, test_list_dir = \
-        random_split(list_dir, [len_80, len_10, len_10])
-
-    train_dataset = DirectoryDataset(tokenizer, path, 'train', train_list_dir, use_cache)
-    eval_dataset  = DirectoryDataset(tokenizer, path, 'eval',  eval_list_dir, use_cache)
-    test_dataset  = DirectoryDataset(tokenizer, path, 'test',  test_list_dir, use_cache)
-
-    return train_dataset, eval_dataset, test_dataset
 
 
-class CompletionDataset:
-    '''
-        name: dataset-1-model-1.csv
 
-    '''
+
 

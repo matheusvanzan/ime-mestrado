@@ -3,7 +3,14 @@
 
 
 import os
+import evaluate
+
+from statistics import mean
 from webbrowser import get
+from accelerate.accelerator import AcceleratedOptimizer
+from collections import Counter
+from sklearn.metrics import confusion_matrix
+from pprint import pprint
 
 import torch
 from transformers.models import gpt2
@@ -11,68 +18,74 @@ torch.manual_seed(42)
 
 from datetime import datetime
 from torch.utils.data import random_split
-from transformers import GPT2Tokenizer, TrainingArguments, Trainer, GPT2LMHeadModel, GPTNeoForCausalLM
+from transformers import GPT2Tokenizer, GPT2TokenizerFast, MobileViTForImageClassification, TrainingArguments, \
+    Trainer, GPT2LMHeadModel, GPT2ForSequenceClassification, EarlyStoppingCallback, TrainerCallback
 
 import pandas as pd
 import numpy as np
 
+import whats
 import settings
 from dataset import DirectoryDataset
-
-from sentence_transformers import SentenceTransformer, util
-
-from datasets import load_metric
-metric = load_metric('accuracy')
 
 
 class GPT:
 
-    def __init__(self, model_name, model_label):
-        print('Model: name', model_name)
-        print('Model: label', model_label)
-
-        self.limit = settings.DATASET_LIMIT
+    def __init__(self, model_name, model_label, limit, fold, epochs, batch):
+        print(f'Model: name {model_name}')
+        print(f"Model: label '{model_label}'")        
 
         self.chunk_size = settings.GPT_TRAIN_CHUNK_SIZE
-        self.batch_size = settings.GPT_BATCH_SIZE
-        self.epochs = settings.GPT_EPOCHS
 
         self.model_name = model_name
         self.model_label = model_label
+        self.limit = limit
+        self.fold = fold
+        self.epochs = epochs
+        self.batch_size = batch
 
-        path = os.path.join(settings.PATH_DATA, model_name)
-        self.path_tokenizer = os.path.join(path, 'tokenizer')
-        self.path_model = os.path.join(path, 'model')
+        if self.model_label == 'all':
+            self.num_labels = len(settings.DATASET_CLASSES)
+        else:
+            self.num_labels = 2
+        print(f'Model: num_labels {self.num_labels}')
+
+        path = os.path.join(settings.PATH_DATA, model_name)        
 
         # Ex: 5.limit-256.chunk-16.epochs-2.batch-16
-        path_label_name = '{}.limit-{}.chunk-{}.epochs-{}.batch-{}'.format(
+        path_label_name = '{}.limit-{}.fold-{}.chunk-{}.epochs-{}.batch-{}'.format(
             self.model_label,
             self.limit,
+            self.fold,
             self.chunk_size,
             self.epochs,
             self.batch_size
         )
-        path_label = os.path.join(path, path_label_name)
+        path_label = os.path.join(path, path_label_name)        
+
         self.output_dir = os.path.join(path_label, 'partial')
         self.logging_dir = os.path.join(path_label, 'logs')
+        self._create_paths()
+
+        self.path_tokenizer = os.path.join(path_label, 'tokenizer')
+        self.path_model = os.path.join(path_label, 'model')
         self.path_model_trained = os.path.join(path_label, 'model-trained')
 
-        self._create_paths()
+        self.path_cmatrix = os.path.join(path_label, 'cmatrix.csv')
+        self.path_results = os.path.join(path_label, 'results.csv')        
 
         self.model = None
         self.tokenizer = self._get_tokenizer()
 
         self.bos_token_id = self.tokenizer('<|startoftext|>').input_ids[0] # 50257
         self.eos_token_id = self.tokenizer('<|endoftext|>').input_ids[0] # 50256
-        self.pad_token_id = self.tokenizer('<|pad|>').input_ids[0] # 50258
-        
+        self.pad_token_id = self.tokenizer('<|pad|>').input_ids[0] # 50258  
 
     def _create_paths(self):
 
         paths = [
             self.output_dir,
             self.logging_dir,
-
         ]
 
         for path in paths:
@@ -82,13 +95,12 @@ class GPT:
     def _get_tokenizer(self):
 
         if not os.path.exists(self.path_tokenizer):
-            print('Model: downloading tokenizer...')  
+            print('Model: downloading tokenizer...')
             tokenizer = GPT2Tokenizer.from_pretrained(
-                self.model_name, 
-                bos_token='<|startoftext|>',
-                eos_token='<|endoftext|>', 
-                pad_token='<|pad|>'
+                self.model_name,
+                num_labels = self.num_labels
             )
+            tokenizer.pad_token = tokenizer.eos_token
             print('Model: saving tokenizer...')
             torch.save(tokenizer, self.path_tokenizer)
             print('Model: tokenizer saved!')
@@ -99,18 +111,20 @@ class GPT:
         return tokenizer
 
     def _get_model_original(self):
+        print('Model: looking for', self.path_model)
 
         if not os.path.exists(self.path_model):
             print('Model: downloading model...')
-            model = GPT2LMHeadModel.from_pretrained(
-                self.model_name
-            ) #.cuda()
-            # model.resize_token_embeddings(len(self.tokenizer))
-            print('Model: saving model...')
+            model = GPT2ForSequenceClassification.from_pretrained(
+                self.model_name,
+                num_labels = self.num_labels
+            )
+            model.config.pad_token_id = model.config.eos_token_id
+            print('Model: caching model...')
             torch.save(model, self.path_model)
-            print('Model: model saved!')
+            print('Model: model cached!')
         else:
-            print('Model: using saved model...')
+            print('Model: using cached model...')
             model = torch.load(self.path_model)
 
         model.to(torch.device('cuda'))
@@ -120,11 +134,24 @@ class GPT:
     def _get_model_trained(self):
 
         print(f'Model: using trained at {self.path_model_trained} ...')
-        model = GPT2LMHeadModel.from_pretrained(
+        model = GPT2ForSequenceClassification.from_pretrained(
             self.path_model_trained
         )
+        # model.config.pad_token_id = model.config.eos_token_id
         model.to(torch.device('cuda'))
         return model
+
+    def _data_collator(self, data):
+        return {
+            'input_ids': torch.stack([f[1] for f in data]),       
+            'attention_mask': torch.stack([f[2] for f in data]),
+            'labels': torch.stack([f[3] for f in data])
+        }
+
+    def trained(self):
+        return os.path.isfile(
+            os.path.join(self.path_model_trained, 'config.json')
+        )
 
     def train(self, train_dataset, val_dataset):
 
@@ -134,317 +161,197 @@ class GPT:
             output_dir = self.output_dir,
             logging_dir = self.logging_dir,
 
-            evaluation_strategy='steps',
-            eval_steps=100,
+            # evaluation_strategy = 'steps',
+            # eval_steps = 10,
 
-            logging_strategy='steps',
-            logging_steps=100,
+            logging_strategy = 'steps',
+            logging_steps = 1000,
 
-            save_strategy='steps',
-            save_steps=1000,
+            save_strategy = 'steps',
+            save_steps = 1000,
 
             num_train_epochs = self.epochs,
                                            
             per_device_train_batch_size = self.batch_size,
             per_device_eval_batch_size = self.batch_size,
 
-            warmup_steps=0,
-            weight_decay=0.01,
+            warmup_steps = 0,
+            weight_decay = 0.01,
 
-            # load_best_model_at_end=True,
-            # metric_for_best_model='accuracy',
-            report_to='tensorboard'
+            # metric_for_best_model = 'accuracy',
+            # load_best_model_at_end = True,
+
+            report_to = 'tensorboard'
         )
 
         # def compute_metrics(eval_pred):
-        #     print('\n\ncompute_metrics\n\n', 'eval_pred', eval_pred)
-        #     # predictions, labels = eval_pred
-        #     # predictions = np.argmax(predictions, axis=1)
-        #     # results =  metric.compute(predictions=predictions, references=labels)
-        #     # return results
-        #     return {'accuracy': 0.75}
+        #     print('\n\n\n***** Compute Metrics *****\n\n\n')
+        #     return None
+
+        class StepCallback(TrainerCallback):
+            def on_log(self, args, state, control, **kwargs):
+                # if state.global_step % 5 == 0:
+                print('Calling StepCallback.on_log()')
+                msg = 'GPT-2 Training\n---------------\n'
+                msg += '- epochs: {}/{}\n'.format(round(state.epoch, 2), state.num_train_epochs)
+                msg += '- steps: {}/{}\n'.format(state.global_step, state.max_steps)
+                msg += '- percent: {}%'.format(round(100*state.global_step/state.max_steps, 2))
+                whats.send(msg)
+
 
         trainer = Trainer(
-            model=model, 
-            args=training_args,
-            train_dataset=train_dataset,
-            eval_dataset=val_dataset, 
-            # This custom collate function is necessary 
-            # to built batches of data
-            data_collator=lambda data: {
-                'input_ids': torch.stack([f[0] for f in data]),       
-                'attention_mask': torch.stack([f[1] for f in data]),
-                'labels': torch.stack([f[0] for f in data])
-            },
-            # compute_metrics=compute_metrics,
+            model = model, 
+            args = training_args,
+            train_dataset = train_dataset,
+            eval_dataset = val_dataset, 
+            data_collator = self._data_collator,
+
+            # compute_metrics = compute_metrics,
+            callbacks = [StepCallback()]
         )
-        # Start training process!
-        #trainer.add_callback(CustomCallback(trainer))
 
-        train = trainer.train() # trainer.train("checkpoint-9500")
-
-        # print(train.metrics)
-
+        try:
+          train = trainer.train(resume_from_checkpoint = True)
+        except:
+          train = trainer.train()
+        
         print('Model: saving trained model...')
         trainer.save_model(self.path_model_trained)
         print('Model: model saved!')
+        return train.metrics
 
-    def encode(self, prompt):
-        gen = self.tokenizer(prompt, return_tensors='pt')
-        return gen.input_ids, gen.attention_mask
+    def results(self):
+        rv = []
+        with open(self.path_results, 'r') as f:
+            for line in f.readlines():
+                items = line.split(',')
+                rv.append([ items[0], int(items[1]) ])
+        return rv
 
-    def decode(self, input_ids):
-        return self.tokenizer.decode(input_ids, skip_special_tokens=True).strip()
+    def metrics(self):
+        print(self.path_results)
 
+        predictions = []
+        references = []
+        good = 0
+        bad = 0
+        with open(self.path_results, 'r') as f:
+            for line in list(f.readlines())[1:]:
+                items = line.split(',')
+                pred = int(items[1].strip())
+                ref = int(items[2].strip())
+                predictions.append(pred)
+                references.append(ref)
 
-    def complete(self, prompt):
+                if pred == ref:
+                    good += 1
+                else:
+                    bad += 1
+
+        print('GOOD:', good)
+        print('BAD:', bad)
+
+        cm = confusion_matrix(references, predictions)
+        print(cm)
+
+        m = {}
+        m.update(evaluate.load('accuracy').compute(
+            predictions = predictions, 
+            references = references
+        ))
+        # m.update(evaluate.load('precision').compute(
+        #     predictions = predictions, 
+        #     references = references,
+        #     average = None
+        # ))
+        # m.update(evaluate.load('recall').compute(
+        #     predictions = predictions, 
+        #     references = references,
+        #     average = None
+        # ))
+        m.update(evaluate.load('f1').compute(
+            predictions = predictions, 
+            references = references,
+            average = None
+        ))
+        return m
+
+    def average(self, l, w = None):
         '''
-            input: str
-            output: str
+            l = [0, 1, 0, 0]
+            average = 0.25
+            returns 0
         '''
+        if not w:
+            return sum([int(x) for x in l]) / len(l)
 
-        input_ids, attention_mask = self.encode(prompt)
-
-        sample_output = self.complete_ids(input_ids[0], attention_mask[0])
-        completion = self.decode(sample_output)
-        return completion.strip()
-
-    def complete_ids(self, input_ids, attention_mask):
-        '''
-            input:
-                input_ids, attention_mask
-            output:
-                ids
-        '''
-
-        if not self.model:
-            self.model = self._get_model_trained()
-
-        # print('  input_ids', input_ids)
-        len_input_ids = len(input_ids)
-
-        input_ids = torch.tensor([list(input_ids)])
-        attention_mask = torch.tensor([list(attention_mask)])
-        
-        # Generate 
-        sample_outputs = self.model.generate(
-            
-            inputs = input_ids.cuda(), 
-            attention_mask = attention_mask.cuda(),
-
-            pad_token_id = self.pad_token_id,
-            max_new_tokens = self.chunk_size,
-
-            # to get a more deterministic completion
-            do_sample=True,
-            top_k=50,
-            top_p=0.95,
-            temperature=0.0001,              
-            num_return_sequences=1
-        )
-
-        # TODO: handle 0-size tensor (num_return_sequences)
-        output_ids = sample_outputs[0][len_input_ids:]
-        # print('  output_ids', output_ids)
-        return output_ids
-
-    def complete2(self, prompt):
-
-        input_ids, attention_mask = self.encode(prompt)
-
-        if not self.model:
-            self.model = self._get_model_trained()
-        
-        # Generate 
-        sample_outputs = self.model.generate(
-            
-            inputs = input_ids.cuda(), 
-            attention_mask = attention_mask.cuda(),
-
-            pad_token_id = self.pad_token_id,
-            max_new_tokens = self.chunk_size,
-
-            # to get a more deterministic completion
-            do_sample=True,
-            top_k=50,
-            top_p=0.95,
-            temperature=0.0001,              
-            num_return_sequences=1
-        )
-
-        # TODO: handle 0-size tensor (num_return_sequences)
-        output_ids = sample_outputs[0]
-        # print('  output_ids', output_ids)
-        completion = self.decode(output_ids)
-        return completion.strip()
-
-
-class GPTTester:
-
-    def __init__(self, gpt_list, dataset_list):
-        self.gpt_list = gpt_list
-        self.dataset_list = dataset_list # only test_dataset
-
-        self.sentence_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-
-    def cos_similarity(self, s1, s2):
-        # print('s1', s1)
-        # print('s2', s2)
-
-        e1 = self.sentence_model.encode(s1, convert_to_tensor=True)
-        e2 = self.sentence_model.encode(s2, convert_to_tensor=True)
-        sim = util.pytorch_cos_sim(e1, e2)
-
-        # print('cos_similarity', sim[0][0])
-        return float(sim[0][0])
-
-    def similarity(self, s1, s2):
-        '''
-            returns: float number in (0, 1)
-        '''
-        # TODO: test another forms
-        return self.cos_similarity(s1, s2)        
-
-    def check(self):
-        # prompt = 'var epb mov 100000h'
-        prompt = 'assume cs 10001000 assume es nothing ss nothing ds data fs'
-        sample_output = 'nothing gs nothing pusha upx1 pusha upx1 pusha'
-
-        print('-----------')
-        print('prompt:', prompt)
-        print('sample_output:', sample_output)
-        print('-----------')
-
-        for gpt in self.gpt_list:
-            print('GPT:', gpt.model_label)
-            output = gpt.complete(prompt)
-            print('  output:', output)
-            print('  similarity:', self.similarity(output, sample_output))
-
-    def test(self):
-
-        df_data = []
-        df_true = 0
-
-        # FOR EACH DATASET
-        for test_dataset in self.dataset_list:
-            dataset_id = test_dataset.path.split('/')[-1]
-            # print('Dataset', dataset_id)        
-
-            test_dataset_list = list(test_dataset) # puts generator into memmory
-            len_dataset_list = len(test_dataset_list)
-
-            # FOR EACH FILE/CHUNK
-            percent_last = 0
-            start = datetime.now()
-            for i in range(0, len_dataset_list - 1):
-
-                ### print log
-                percent = int(100*i/len_dataset_list)
-                if percent != percent_last and percent % 5 == 0:
-                    percent_last = percent
-                    now = datetime.now()
-                    elapsed = now - start
-                    remain = (elapsed/percent)*(100-percent)
-                    to_print = f"Test: dataset {dataset_id} - {percent}% "
-                    to_print += f"({str(elapsed).split('.')[0]} < {str(remain).split('.')[0]})"
-                    print(to_print)
-                ### end print log
-
-                input_ids, attention_mask = test_dataset_list[i]
-                input_ids_next, _ = test_dataset_list[i+1]
-
-                gpt0 = self.gpt_list[0]
-                # prompt = gpt0.decode(input_ids)
-                prompt_next = gpt0.decode(input_ids_next) # da pra economizar aqui? , para a proxima iteração, criar um array de decodes (salvar encoded e decoded???)
-
-                sim_list = []
-                sim_max = 0
-                sim_max_id = 0
-
-                for gpt in self.gpt_list:
-                    # output = gpt.complete(prompt)
-                    output_ids = gpt.complete_ids(input_ids, attention_mask)
-                    output = gpt.decode(output_ids)
-                    # print('  output:', output)
-
-                    sim = self.similarity(
-                        output, # prediction
-                        prompt_next # actual value
-                    )
-                    sim_list.append(sim)
-
-                    if sim > sim_max:
-                        sim_max = sim
-                        sim_max_id = gpt.model_label
-
-                if str(dataset_id) == str(sim_max_id):
-                    df_true += 1
-
-                df_data.append([dataset_id, i, sim_max_id] + sim_list)
-
-        columns = ['dataset', 'chunk', 'sim_max'] + \
-                  [f'sim_{gpt.model_label}' for gpt in self.gpt_list]
-
-        df = pd.DataFrame(df_data, columns=columns)
-        acc = df_true/len(df_data)
-        return df, acc
-
-
-        # metric = load_metric("accuracy")
-        # metric.compute(predictions=[0,0,1,1], references=[0,1,1,1])
-        # # {'accuracy': 0.75}
-            
-
-
-class GPTOriginal(GPT):
-
-    def __init__(self, model_name):
-        return super().__init__(model_name, 'original')
-
-    def _get_tokenizer(self):
-
-        if not os.path.exists(self.path_tokenizer):
-            print('Model: downloading tokenizer...')
-            tokenizer = GPT2Tokenizer.from_pretrained(
-                self.model_name
-            )
-            print('Model: saving tokenizer...')
-            torch.save(tokenizer, self.path_tokenizer)
-            print('Model: tokenizer saved!')
         else:
-            print('Model: using saved tokenizer...')
-            tokenizer = torch.load(self.path_tokenizer)
+            return sum(int(x)*int(y) for x, y in zip(l, w)) / sum(w)
 
-        return tokenizer
-
-    def complete(self, prompt):
-
-        model = self._get_model_original()
-        generated = self.tokenizer(prompt, return_tensors='pt').input_ids.cuda()
-
-        # Generate 3 movie descriptions
-        sample_outputs = model.generate(
-            generated, 
-            # Use sampling instead of greedy decoding 
-            do_sample=True, 
-            # Keep only top 50 token with the highest probability
-            top_k=50, 
-            # Maximum sequence length
-            # max_length=50,
-            max_new_tokens=30,
-            # Keep only the most probable tokens with cumulative probability of 95%
-            top_p=0.95, 
-            # Changes randomness of generated sequences
-            temperature=0.0001,
-            # Number of sequences to generate                 
-            num_return_sequences=1
+    def test(self, test_dataset):
+        
+        model_trained = self._get_model_trained()
+        trainer = Trainer(
+            model = model_trained,
+            data_collator = self._data_collator
         )
 
-        # Print generated descriptions
-        # for i, sample_output in enumerate(sample_outputs): 
-        #     print('{}: {}'.format(i, self.tokenizer.decode(sample_output, skip_special_tokens=True)).replace('\n', ' '))
+        # metrics by chunk
+        test_predictions_weights = trainer.predict(test_dataset)
+        # test_predictions = np.argmax(test_predictions_weights[0], axis=1)
 
-        completion = self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
-        return completion[len(prompt):].replace('\n', ' ').strip()
+        test_labels = np.array([label for _, _, _, label in test_dataset])
+        test_references = np.array(test_labels)
+
+        # metrics by file
+        files = {}
+        test_predictions_2 = []
+        test_references_2 = []
+        for i in range(len(test_dataset)):
+            file_id, _, _, label = test_dataset[i]
+
+            predw = test_predictions_weights[0][i]
+            # pred = test_predictions[i]
+            # print('predw', predw)
+
+            pred = np.argmax(predw)
+            # print('pred', pred)
+
+            dist = max(predw[0], predw[1]) - min(predw[0], predw[1])
+            # print('dist', dist)
+
+            if file_id not in files:
+                files.update({ file_id:{'pred': [], 'dist': [], 'ref': []} })
+
+            files[file_id]['pred'].append(pred)
+            files[file_id]['dist'].append(dist)
+            files[file_id]['ref'].append(int(label))
+
+        with open(self.path_results, 'w+') as f:
+            f.write(f"file_id,pred_{self.model_label},ref\n")
+
+            for file_id, values in files.items():
+                ref = values['ref'][0]
+
+                # counter
+                pred_3c = Counter(values['pred'])
+                pred_3 = pred_3c.most_common()[0][0]
+
+                f.write(f"{file_id},{pred_3},{ref}\n")
+
+        return self.metrics()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
