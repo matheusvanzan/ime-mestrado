@@ -58,6 +58,8 @@ class DirectoryDataset(Dataset):
 
     def __init__(self, tokenizer, label, label_0, path, split_name, list_dir, limit, fold, use_cache):
 
+        self.verbose = False
+
         self.tokenizer = tokenizer
         self.label = label
         self.label_0 = label_0
@@ -83,9 +85,12 @@ class DirectoryDataset(Dataset):
             else:
                 self.label_id = torch.tensor( 1 )
 
-        print(f'Dataset: label {self.label} - {self.split_name} - in model as torch.tensor({self.label_id})')
+        if self.verbose:
+            print(f'Dataset: label {self.label} - {self.split_name} - in model as torch.tensor({self.label_id})')
+            print('self.path', self.path)
 
-        self.path_csv = f'{self.path}.limit-{self.limit}.fold-{self.fold}.chunk-{self.chunk_size}.{self.split_name}.csv'
+        path_csv_tmp = os.path.join(path, f'fold-{self.fold}', label)
+        self.path_csv = f'{path_csv_tmp}.limit-{self.limit}.fold-{self.fold}.chunk-{self.chunk_size}.{self.split_name}.csv'
 
         self._create_csv() # if not in file already
         self._create_input_ids()
@@ -140,11 +145,13 @@ class DirectoryDataset(Dataset):
     def _create_csv(self):
 
         if self.use_cache and os.path.isfile(self.path_csv):
-            print(f'Dataset: label {self.label} - {self.split_name} - loading from {self.path_csv} ...')
+            if self.verbose:
+                print(f'Dataset: label {self.label} - {self.split_name} - loading from {self.path_csv} ...')
 
         else:
-            print(f'Dataset: label {self.label} - {self.split_name} - creating from {self.path} ...')
-            print(f'Dataset: label {self.label} - {self.split_name} - {len(self.list_dir)} files')
+            if self.verbose:
+                print(f'Dataset: label {self.label} - {self.split_name} - creating from {self.path} ...')
+                print(f'Dataset: label {self.label} - {self.split_name} - {len(self.list_dir)} files')
 
             # create .csv
             with open(self.path_csv, 'w+') as file_csv:
@@ -157,7 +164,7 @@ class DirectoryDataset(Dataset):
 
                 fileid = filename.split('.')[0]
 
-                with open(filepath, 'r') as f:
+                with open(filepath, 'r', encoding='utf-8') as f:
                     content = f.read()
 
                 # write chunks
@@ -170,16 +177,19 @@ class DirectoryDataset(Dataset):
                         file_csv.write(line)
 
                 if len_list_dir > 10 and i % (int(len_list_dir/10)) == 0:
-                    print(f'Dataset: label {self.label} - {self.split_name} - {int(100*i/len_list_dir)}%')
+                    if self.verbose:
+                        print(f'Dataset: label {self.label} - {self.split_name} - {int(100*i/len_list_dir)}%')
 
-            print(f'Dataset: label {self.label} - {self.split_name} - saved at {self.path_csv}')
+            if self.verbose:
+                print(f'Dataset: label {self.label} - {self.split_name} - saved at {self.path_csv}')
 
     def _create_input_ids(self):
 
         with open(self.path_csv, 'r') as f:
             self.chunks = f.readlines()
 
-        print(f'Dataset: label {self.label} - {self.split_name} - {len(self.chunks)} chunks - {getsizeof_gb(self.chunks)} Gb')
+        if self.verbose:
+            print(f'Dataset: label {self.label} - {self.split_name} - {len(self.chunks)} chunks - {getsizeof_gb(self.chunks)} Gb')
 
     def getfile(self, idx):
         chunk = self.chunks[idx]
@@ -213,6 +223,8 @@ class DatasetHelper:
 
     def __init__(self, tokenizer, labels, label_0, path, limit, fold, use_cache=True):
 
+        self.verbose = False
+
         self.tokenizer = tokenizer
         self.labels = labels
         self.label_0 = label_0
@@ -228,10 +240,12 @@ class DatasetHelper:
         }
 
         for i, label in enumerate(self.labels):
-            print('-----')
-            print('label', i)
+            if self.verbose:
+                print('----\nlabel', label)
 
             # NO K-FOLD
+            if self.verbose:
+                print(os.path.join(path, label))
             os_list_dir = os.listdir(os.path.join(path, label))
             len_10 = int(0.1 * len(os_list_dir))
             len_80 = len(os_list_dir) - 2*len_10
@@ -239,15 +253,20 @@ class DatasetHelper:
             # print('NO K-FOLD')
             # self.list_dir['train'][i], \
             # self.list_dir['eval'][i], \
-            # self.list_dir['test'][i] = random_split(os_list_dir, [len_80, len_10, len_10])            
+            # self.list_dir['test'][i] = random_split(os_list_dir, [len_80, len_10, len_10])
+
+            if self.verbose:
+                print('os_list_dir', len(os_list_dir), '-', os_list_dir[0], '...', os_list_dir[-1])        
             
             # WITH K-FOLD
             splits = random_split(os_list_dir, [len(os_list_dir) - 9*len_10] + 9*[len_10])
+            # print('splits', splits[0][0], splits[-1][0])
 
             # print('WITH K-FOLD')
             fold_0 = self.fold - 1
 
             splits_shifted = splits[fold_0:] + splits[:fold_0]
+            # print('splits_shifted', splits_shifted[0][0], splits_shifted[-1][0])
 
             splits_train = [ splits_shifted[i] for i in range(8) ]
             splits_eval = splits_shifted[8]
@@ -257,8 +276,9 @@ class DatasetHelper:
             self.list_dir['eval'][i]  = splits_eval
             self.list_dir['test'][i]  = splits_test
 
-            # for split in ['train', 'eval', 'test']:
-            #     print('  ', split, '-', len(self.list_dir[split][i]), '-', self.list_dir[split][i][0], '...', self.list_dir[split][i][-1])
+            if self.verbose:
+                for split in ['train', 'eval', 'test']:
+                    print('  ', split, '-', len(self.list_dir[split][i]), '-', self.list_dir[split][i][0], '...', self.list_dir[split][i][-1])
 
             leakage_check(
                 self.list_dir['train'][i],

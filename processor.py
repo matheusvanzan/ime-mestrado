@@ -20,7 +20,7 @@ class Processor:
         self.path_data_raw = settings.PATH_DATA_ASM
         self.path_data_proc = settings.PATH_DATA_PROC_1
         self.vocab = settings.NPL_VOCAB
-        self.max_workers = 2 # settings.MAX_WORKERS
+        self.max_workers = 8 # settings.MAX_WORKERS
 
     def filter_segment(self, content, segment='pure code'):
         '''
@@ -94,14 +94,14 @@ class Processor:
             values.append((i+1, self.docs_limit, filename))
 
         # Singleprocessor
-        for value in values:
-            self.process_single_doc(value)
+        # for value in values:
+        #     self.process_single_doc(value)
 
         # Multiprocessor
-        #with ProcessPoolExecutor(max_workers = self.max_workers) as executor:
-        #    for i, x in enumerate(executor.map( \
-        #            self.process_single_doc, values)):
-        #            x # use it just to execute ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers = self.max_workers) as executor:
+           for i, x in enumerate(executor.map( \
+                   self.process_single_doc, values)):
+                   x # use it just to execute ProcessPoolExecutor
 
     def process_single_doc(self, values):
         start = datetime.datetime.now()
@@ -158,7 +158,7 @@ class Processor:
         for id_, label in zip(content['Id'], content['Class']):
             new_path = os.path.join(self.path_data_proc, str(label), f'{id_}.asm')
 
-            with open(new_path, 'r') as f:
+            with open(new_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
                 if len(content) == 0:

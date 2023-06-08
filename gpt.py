@@ -33,7 +33,9 @@ class GPT:
 
     def __init__(self, model_name, model_label, limit, fold, epochs, batch):
         print(f'Model: name {model_name}')
-        print(f"Model: label '{model_label}'")        
+        print(f"Model: label '{model_label}'")
+
+        self.early_stop = False
 
         self.chunk_size = settings.GPT_TRAIN_CHUNK_SIZE
 
@@ -72,7 +74,8 @@ class GPT:
         self.path_model_trained = os.path.join(path_label, 'model-trained')
 
         self.path_cmatrix = os.path.join(path_label, 'cmatrix.csv')
-        self.path_results = os.path.join(path_label, 'results.csv')        
+        self.path_results = os.path.join(path_label, 'results.csv')
+        self.path_train_metrics = os.path.join(path_label, 'train-metrics.json')
 
         self.model = None
         self.tokenizer = self._get_tokenizer()
@@ -161,16 +164,15 @@ class GPT:
             output_dir = self.output_dir,
             logging_dir = self.logging_dir,
 
-            # evaluation_strategy = 'steps',
-            # eval_steps = 10,
+            num_train_epochs = self.epochs,
 
+            # log for tensorboard
             logging_strategy = 'steps',
             logging_steps = 1000,
 
+            # save for continuig training
             save_strategy = 'steps',
-            save_steps = 1000,
-
-            num_train_epochs = self.epochs,
+            save_steps = 10000,                      
                                            
             per_device_train_batch_size = self.batch_size,
             per_device_eval_batch_size = self.batch_size,
@@ -178,26 +180,67 @@ class GPT:
             warmup_steps = 0,
             weight_decay = 0.01,
 
-            # metric_for_best_model = 'accuracy',
-            # load_best_model_at_end = True,
+            # earlystopping
+            evaluation_strategy = 'steps' if self.early_stop else 'no',
+            eval_steps = 100,
+            load_best_model_at_end = self.early_stop,
+            metric_for_best_model = 'accuracy',            
 
             report_to = 'tensorboard'
         )
 
-        # def compute_metrics(eval_pred):
-        #     print('\n\n\n***** Compute Metrics *****\n\n\n')
-        #     return None
+        def compute_metrics(eval_pred):
+            print('\nCompute Metrics\n')
+            # print('eval_pred', eval_pred)
+
+            # print('eval_pred.label_ids', eval_pred.label_ids)
+            # print('eval_pred.predictions', eval_pred.predictions)
+
+            chunk_predictions_weights = eval_pred.predictions
+            chunk_predictions = np.argmax(chunk_predictions_weights, axis=1)
+            # print('chunk_predictions', chunk_predictions)
+
+            file_ids, references, predictions = self.convert_chunks_to_files(val_dataset, chunk_predictions)
+            m = self._metrics(predictions, references)
+            print('m', m)
+
+            # input('waiting...')
+
+            return {'eval_accuracy': m['accuracy']}
 
         class StepCallback(TrainerCallback):
+
             def on_log(self, args, state, control, **kwargs):
                 # if state.global_step % 5 == 0:
-                print('Calling StepCallback.on_log()')
-                msg = 'GPT-2 Training\n---------------\n'
-                msg += '- epochs: {}/{}\n'.format(round(state.epoch, 2), state.num_train_epochs)
-                msg += '- steps: {}/{}\n'.format(state.global_step, state.max_steps)
-                msg += '- percent: {}%'.format(round(100*state.global_step/state.max_steps, 2))
+                print('\nCalling StepCallback.on_log()')
+                msg = 'MalGPT - {}%\n'.format(round(100*state.global_step/state.max_steps, 2))
+                msg += '---------------\n'
+                msg += '{} epochs of {}\n'.format(round(state.epoch, 2), state.num_train_epochs)
+                msg += '{} steps of {}\n'.format(state.global_step, state.max_steps)
                 whats.send(msg)
+                # print('Exiting StepCallback.on_log()')
 
+            def on_train_end(self, args, state, control, **kwargs):
+                print('\nCalling StepCallback.on_train_end()')
+                print(state)
+
+
+        class MyEarlyStoppingCallback(EarlyStoppingCallback):
+            def on_log(self, args, state, control, **kwargs):
+                print('\nCalling MyEarlyStoppingCallback.on_log()')
+                print('state', state)
+                print(dir(state))
+                print('Exiting MyEarlyStoppingCallback.on_log()')
+
+        if self.early_stop:
+            early_stop_compute_metrics = compute_metrics
+            early_stop_callbacks = [
+                StepCallback(),
+                EarlyStoppingCallback(early_stopping_patience=3)
+            ]
+        else:
+            early_stop_compute_metrics = None
+            early_stop_callbacks = []
 
         trainer = Trainer(
             model = model, 
@@ -206,8 +249,8 @@ class GPT:
             eval_dataset = val_dataset, 
             data_collator = self._data_collator,
 
-            # compute_metrics = compute_metrics,
-            callbacks = [StepCallback()]
+            compute_metrics = early_stop_compute_metrics,
+            callbacks = early_stop_callbacks
         )
 
         try:
@@ -218,6 +261,10 @@ class GPT:
         print('Model: saving trained model...')
         trainer.save_model(self.path_model_trained)
         print('Model: model saved!')
+
+        with open(self.path_train_metrics, 'w+') as f:
+            f.write(str(train.metrics))
+
         return train.metrics
 
     def results(self):
@@ -227,32 +274,26 @@ class GPT:
                 items = line.split(',')
                 rv.append([ items[0], int(items[1]) ])
         return rv
+    
+    def _metrics(self, predictions, references):
+        print('gpt._metrics')
 
-    def metrics(self):
-        print(self.path_results)
-
-        predictions = []
-        references = []
         good = 0
         bad = 0
-        with open(self.path_results, 'r') as f:
-            for line in list(f.readlines())[1:]:
-                items = line.split(',')
-                pred = int(items[1].strip())
-                ref = int(items[2].strip())
-                predictions.append(pred)
-                references.append(ref)
+        for pred, ref in zip(references, predictions):
+            if pred == ref: good += 1
+            else: bad += 1
 
-                if pred == ref:
-                    good += 1
-                else:
-                    bad += 1
+        print(' - GOOD:', good)
+        print(' - BAD:', bad)
 
-        print('GOOD:', good)
-        print('BAD:', bad)
-
-        cm = confusion_matrix(references, predictions)
-        print(cm)
+        msg = 'MalGPT - Test metrics\n'
+        msg += '---------------\n'
+        msg += '{} epochs\n'.format(self.epochs)
+        msg += 'Acc {}\n'.format(round(100*good/(bad+good), 4))
+        msg += 'Good {}\n'.format(good)
+        msg += 'Bad {}\n'.format(bad)
+        whats.send(msg)
 
         m = {}
         m.update(evaluate.load('accuracy').compute(
@@ -276,17 +317,67 @@ class GPT:
         ))
         return m
 
-    def average(self, l, w = None):
+    def metrics(self):
         '''
-            l = [0, 1, 0, 0]
-            average = 0.25
-            returns 0
+            - read results from file
+            - calculate metrics
         '''
-        if not w:
-            return sum([int(x) for x in l]) / len(l)
+        print('gpt.metrics > self.path.results', self.path_results)
+        predictions = []
+        references = []
+        with open(self.path_results, 'r') as f:
+            for line in list(f.readlines())[1:]:
+                items = line.split(',')
+                pred = int(items[1].strip())
+                ref = int(items[2].strip())
+                predictions.append(pred)
+                references.append(ref)                      
 
-        else:
-            return sum(int(x)*int(y) for x, y in zip(l, w)) / sum(w)
+        cm = confusion_matrix(references, predictions)
+        print(cm)
+
+        m = self._metrics(references, predictions) 
+        return m
+
+    def convert_chunks_to_files(self, chunk_dataset, chunk_predictions):
+        '''
+            Convert test by chunk to test by file
+            references are infered from dataset
+        '''
+
+        # metrics by file
+        files = {}
+        for i in range(len(chunk_dataset)):
+            file_id, _, _, label = chunk_dataset[i]
+            # print('file_id', file_id, 'label', int(label))
+
+            pred = chunk_predictions[i]
+            # print('pred', pred)
+
+            if file_id not in files:
+                files.update({ file_id:{'pred': [], 'ref': []} })
+
+            files[file_id]['pred'].append(pred)
+            files[file_id]['ref'].append(int(label))
+
+        file_ids = []
+        references = []
+        predictions = []
+
+        for file_id, values in files.items():
+            file_ids.append(file_id)
+            ref = values['ref'][0]
+
+            # counter
+            pred_3c = Counter(values['pred'])
+            # print('pred_3c', pred_3c)
+            pred_3 = pred_3c.most_common()[0][0]
+
+            references.append(ref)
+            predictions.append(pred_3)
+
+        return file_ids, references, predictions
+
 
     def test(self, test_dataset):
         
@@ -297,49 +388,34 @@ class GPT:
         )
 
         # metrics by chunk
-        test_predictions_weights = trainer.predict(test_dataset)
-        # test_predictions = np.argmax(test_predictions_weights[0], axis=1)
+        chunk_predictions_weights = trainer.predict(test_dataset)
+        print('chunk_predictions_weights len', len(chunk_predictions_weights[0]))
+        print('test metrics', chunk_predictions_weights[2])
 
-        test_labels = np.array([label for _, _, _, label in test_dataset])
-        test_references = np.array(test_labels)
+        chunk_predictions = np.argmax(chunk_predictions_weights[0], axis=1)
+        print('chunk_predictions len', len(chunk_predictions))
+        
 
-        # metrics by file
-        files = {}
-        test_predictions_2 = []
-        test_references_2 = []
-        for i in range(len(test_dataset)):
-            file_id, _, _, label = test_dataset[i]
+        file_ids, references, predictions = self.convert_chunks_to_files(test_dataset, chunk_predictions)
 
-            predw = test_predictions_weights[0][i]
-            # pred = test_predictions[i]
-            # print('predw', predw)
+        print('Final')
+        print(' - file_ids', len(file_ids))
+        print(' - references', len(references))
+        print(' - predictions', len(predictions))
 
-            pred = np.argmax(predw)
-            # print('pred', pred)
-
-            dist = max(predw[0], predw[1]) - min(predw[0], predw[1])
-            # print('dist', dist)
-
-            if file_id not in files:
-                files.update({ file_id:{'pred': [], 'dist': [], 'ref': []} })
-
-            files[file_id]['pred'].append(pred)
-            files[file_id]['dist'].append(dist)
-            files[file_id]['ref'].append(int(label))
-
+        # save to file
         with open(self.path_results, 'w+') as f:
-            f.write(f"file_id,pred_{self.model_label},ref\n")
+            f.write(f'file_id,pred_{self.model_label},ref\n')
+            for file_id, ref, pred in zip(file_ids, references, predictions):
+                f.write(f'{file_id},{pred},{ref}\n')
 
-            for file_id, values in files.items():
-                ref = values['ref'][0]
+        # print('CHUNK SCORE')
+        # chunk_references = chunk_predictions_weights[1]
+        # self._metrics(chunk_predictions, chunk_references)
 
-                # counter
-                pred_3c = Counter(values['pred'])
-                pred_3 = pred_3c.most_common()[0][0]
-
-                f.write(f"{file_id},{pred_3},{ref}\n")
-
-        return self.metrics()
+        # print('FILE SCORE')
+        m = self._metrics(predictions, references)
+        return m
 
 
 

@@ -3,3 +3,5 @@ accelerate==0.12.0
 bitsandbytes==0.34.0
 sentence-transformers==2.2.2
 evaluate==0.3.0
+tensorflow
+django==4.2.1

@@ -8,7 +8,8 @@ from torch import NoneType
 PROJECT_NAME = 'project'
 
 # PATHS
-PATH_GPT = '/content/drive/Shareddrives/GPTJ/'
+# PATH_GPT = '/content/drive/Shareddrives/GPTJ/'
+PATH_GPT = 'C:\\Users\\vanza\\Documents\\Codes\\ime\\am-malware\\'
 
 PATH_PROJECT = os.path.join(PATH_GPT, 'project')
 PATH_DATA = os.path.join(PATH_GPT, 'data')
@@ -68,8 +69,8 @@ DATASET_LIMIT = 1024 # number of tokens
 
 # GPT
 MODEL_NAME = 'gpt2'
-GPT_TRAIN_CHUNK_SIZE = 32
-GPT_TEST_CHUNK_SIZE = 32
+GPT_TRAIN_CHUNK_SIZE = DATASET_CHUNK_SIZE
+GPT_TEST_CHUNK_SIZE = DATASET_CHUNK_SIZE
 GPT_BATCH_SIZE = 160
 GPT_EPOCHS = 2
 

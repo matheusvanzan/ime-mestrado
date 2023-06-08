@@ -151,7 +151,7 @@ def main(args):
                     model_name=model_name, 
                     model_label=label_0, 
                     limit=limit,
-                    fold = fold,
+                    fold=fold,
                     epochs=epochs,
                     batch=batch
                 )
@@ -177,7 +177,14 @@ def main(args):
             metrics = {}
             # results = []
             for label_0 in labels:
-                gpt = GPT(model_name=model_name, model_label=label_0, limit=limit, epochs=epochs, batch=batch)
+                gpt = GPT(
+                    model_name=model_name,
+                    model_label=label_0,
+                    limit=limit,
+                    fold=fold,
+                    epochs=epochs,
+                    batch=batch
+                )
                 metric = gpt.metrics()
                 metrics.update({label_0: metric})
 
