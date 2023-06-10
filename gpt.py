@@ -31,7 +31,7 @@ from dataset import DirectoryDataset
 
 class GPT:
 
-    def __init__(self, model_name, model_label, limit, fold, epochs, batch):
+    def __init__(self, model_name, model_label, limit, fold, epochs, batch, version):
         print(f'Model: name {model_name}')
         print(f"Model: label '{model_label}'")
 
@@ -45,6 +45,7 @@ class GPT:
         self.fold = fold
         self.epochs = epochs
         self.batch_size = batch
+        self.version = version
 
         if self.model_label == 'all':
             self.num_labels = len(settings.DATASET_CLASSES)
@@ -54,14 +55,15 @@ class GPT:
 
         path = os.path.join(settings.PATH_DATA, model_name)        
 
-        # Ex: 5.limit-256.chunk-16.epochs-2.batch-16
-        path_label_name = '{}.limit-{}.fold-{}.chunk-{}.epochs-{}.batch-{}'.format(
+        # Ex: 5.limit-256.chunk-16.epochs-2.batch-16.version-2
+        path_label_name = '{}.limit-{}.fold-{}.chunk-{}.epochs-{}.batch-{}.version-{}'.format(
             self.model_label,
             self.limit,
             self.fold,
             self.chunk_size,
             self.epochs,
-            self.batch_size
+            self.batch_size,
+            self.version
         )
         path_label = os.path.join(path, path_label_name)        
 

@@ -10,6 +10,14 @@ from sys import getsizeof
 
 import settings
 
+def os_listdir(path):
+    print('os.listdir ovewrite', path)
+
+    list_dir = os.listdir(path)
+    print('  - first', list_dir[0], list_dir[1], list_dir[2])
+    print('  - last', list_dir[-3], list_dir[-2], list_dir[-1])
+
+    return list_dir
 
 def leakage_check(l1, l2, l3):
     # print('leakage_check')
@@ -21,8 +29,6 @@ def leakage_check(l1, l2, l3):
     
     if len(i12) + len(i13) + len(i23) > 0:
         raise Exception('DATA LEAK')
-
-
 
 def get_chunks(list_, window, fill=None, limit=None):
     '''
@@ -56,18 +62,19 @@ def custom_one_hot_encoder(n, total):
 
 class DirectoryDataset(Dataset):
 
-    def __init__(self, tokenizer, label, label_0, path, split_name, list_dir, limit, fold, use_cache):
+    def __init__(self, tokenizer, label, label_0, path, split_name, list_dir, limit, fold, version, use_cache):
 
         self.verbose = False
 
         self.tokenizer = tokenizer
         self.label = label
         self.label_0 = label_0
-        self.path = os.path.join(path, label)        
+        self.path = os.path.join(path, 'by-label', label)        
         self.split_name = split_name
         self.list_dir = list_dir
         self.limit = limit
         self.fold = fold
+        self.version = version
 
         self.use_cache = use_cache
 
@@ -89,8 +96,13 @@ class DirectoryDataset(Dataset):
             print(f'Dataset: label {self.label} - {self.split_name} - in model as torch.tensor({self.label_id})')
             print('self.path', self.path)
 
-        path_csv_tmp = os.path.join(path, f'fold-{self.fold}', label)
-        self.path_csv = f'{path_csv_tmp}.limit-{self.limit}.fold-{self.fold}.chunk-{self.chunk_size}.{self.split_name}.csv'
+        # directory
+        path_csv_parent = os.path.join(path, f'version-{version}', f'fold-{self.fold}')
+        if not os.path.exists(path_csv_parent):
+            os.makedirs(path_csv_parent)        
+        
+        # file name
+        self.path_csv = os.path.join(path_csv_parent, f'{label}.limit-{self.limit}.fold-{self.fold}.chunk-{self.chunk_size}.version-{self.version}.{self.split_name}.csv')
 
         self._create_csv() # if not in file already
         self._create_input_ids()
@@ -159,9 +171,8 @@ class DirectoryDataset(Dataset):
 
             # loop .asm files
             len_list_dir = len(self.list_dir)
-            for i, filename in enumerate(self.list_dir):
+            for i, filename in enumerate(self.list_dir):                
                 filepath = os.path.join(self.path, filename)
-
                 fileid = filename.split('.')[0]
 
                 with open(filepath, 'r', encoding='utf-8') as f:
@@ -221,7 +232,7 @@ class DirectoryDataset(Dataset):
 
 class DatasetHelper:
 
-    def __init__(self, tokenizer, labels, label_0, path, limit, fold, use_cache=True):
+    def __init__(self, tokenizer, labels, label_0, path, limit, fold, version, use_cache=True):
 
         self.verbose = False
 
@@ -231,6 +242,7 @@ class DatasetHelper:
         self.path = path # proc-1
         self.limit = limit
         self.fold = fold
+        self.version = version
         self.use_cache = use_cache
         
         self.list_dir = {
@@ -240,13 +252,17 @@ class DatasetHelper:
         }
 
         for i, label in enumerate(self.labels):
+
+            list_dir_path = os.path.join(self.path, 'by-label', label)
+
             if self.verbose:
                 print('----\nlabel', label)
+                print('- version', self.version)
+                print('- list_dir_path', list_dir_path)
 
-            # NO K-FOLD
-            if self.verbose:
-                print(os.path.join(path, label))
-            os_list_dir = os.listdir(os.path.join(path, label))
+            # point to ovewrite os.listdir for versioning
+            os_list_dir = os_listdir(list_dir_path)
+
             len_10 = int(0.1 * len(os_list_dir))
             len_80 = len(os_list_dir) - 2*len_10
 
@@ -301,6 +317,7 @@ class DatasetHelper:
                 list_dir = self.list_dir[split_name][i],
                 limit = self.limit,
                 fold = self.fold,
+                version = self.version,
                 use_cache = self.use_cache
             )
 

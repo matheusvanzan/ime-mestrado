@@ -10,10 +10,13 @@ PROJECT_NAME = 'project'
 
 # PATHS
 print(platform.system())
+
 if platform.system() == 'Windows':
     PATH_GPT = 'C:\\Users\\vanza\\Documents\\Codes\\ime\\am-malware\\'
+    VERSION = 1
 elif platform.system() == 'Linux':
     PATH_GPT = '/home/utilizador/codes/'
+    VERSION = 2
 else:
     raise Exception('Paths not configured in settings.py')
 
@@ -79,7 +82,4 @@ GPT_TRAIN_CHUNK_SIZE = DATASET_CHUNK_SIZE
 GPT_TEST_CHUNK_SIZE = DATASET_CHUNK_SIZE
 GPT_BATCH_SIZE = 160
 GPT_EPOCHS = 2
-VERSION = 1
-
-
 

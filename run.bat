@@ -13,5 +13,5 @@ set PATH=/c/Users/vanza/Documents/Codes/ime/am-malware/project
 
 
 
-%PATH%\env\Scripts\python %PATH%\main.py --train --multi --model=gpt2 --limit=all --epochs=3 --batch=160 --fold=2
-%PATH%\env\Scripts\python %PATH%\main.py --test --multi --model=gpt2 --limit=all --epochs=3 --batch=160 --fold=2
+%PATH%\env\Scripts\python %PATH%\main.py --train --multi --model=gpt2 --limit=1024 --epochs=1 --batch=160 --fold=1 --version=2
+%PATH%\env\Scripts\python %PATH%\main.py --test --multi --model=gpt2 --limit=1024 --epochs=1 --batch=160 --fold=1 --version=2

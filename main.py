@@ -97,7 +97,8 @@ def main(args):
                 limit=limit,
                 fold = fold,
                 epochs=epochs, 
-                batch=batch
+                batch=batch,
+                version=version
             )
 
             helper = DatasetHelper(
@@ -107,6 +108,7 @@ def main(args):
                 path = path, 
                 limit = limit,
                 fold = fold,
+                version = version,
                 use_cache = True
             )
             
@@ -126,7 +128,8 @@ def main(args):
                     limit=limit,
                     fold = fold,
                     epochs=epochs,
-                    batch=batch
+                    batch=batch,
+                    version=version
                 )
 
                 if not gpt.trained():
@@ -137,6 +140,7 @@ def main(args):
                         path = path, 
                         limit = limit,
                         fold = fold,
+                        version = version,
                         use_cache = True
                     )
                     train_dataset = helper.get_train()
@@ -158,7 +162,8 @@ def main(args):
                     limit=limit,
                     fold=fold,
                     epochs=epochs,
-                    batch=batch
+                    batch=batch,
+                    version=version
                 )
 
                 helper = DatasetHelper(
@@ -168,6 +173,7 @@ def main(args):
                     path = path, 
                     limit = limit,
                     fold = fold,
+                    version = version,
                     use_cache = True
                 )
                 test_dataset = helper.get_test()
@@ -188,7 +194,8 @@ def main(args):
                     limit=limit,
                     fold=fold,
                     epochs=epochs,
-                    batch=batch
+                    batch=batch,
+                    version=version
                 )
                 metric = gpt.metrics()
                 metrics.update({label_0: metric})

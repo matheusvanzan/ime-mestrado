@@ -59,13 +59,15 @@ def metrics(path_results):
 def index(request):
 
     model = 'gpt2'
-    chunk_size = '32'
-    batch_size = '160'
+    chunk = '32'
+    batch = '160'
 
     limits = ['1024', '102400', 'all']
     epochs =  [1, 2, 3, 5, 10, 14, 15, 20] # range(21)
     folds = [str(x) for x in range(1, 10+1)] + ['k']
     k_fold = False
+
+    version = '2'
 
     if 'model' in request.GET:
         model = request.GET['model']
@@ -89,8 +91,8 @@ def index(request):
                 for fold in folds:
 
                     path_ = os.path.join(path, model)
-                    path_key = 'all.limit-{}.fold-{}.chunk-{}.epochs-{}.batch-{}'.format(limit, fold, chunk_size, epoch, batch_size)
-                    key = '{}.{}.{}.{}'.format(model, limit, epoch, fold)
+                    path_key = 'all.limit-{}.fold-{}.chunk-{}.epochs-{}.batch-{}.version-{}'.format(limit, fold, chunk, epoch, batch, version)
+                    key = '{}.{}.{}.{}.{}.{}.{}'.format(model, limit, fold, chunk, epoch, batch, version)
 
                     if key not in results:
                         results.update({
@@ -98,7 +100,10 @@ def index(request):
                                 'model': model,
                                 'limit': limit,
                                 'epoch': epoch,
-                                'fold': fold
+                                'fold': fold,
+                                'chunk': chunk,
+                                'batch': batch,
+                                'version': version,
                             }
                         })
                     
@@ -117,7 +122,8 @@ def index(request):
                             m_kfold[k].append(m[k])
 
                         avg += m['accuracy']
-                    except:
+                    except Exception as e:
+                        # print(e)
                         pass
 
                 # k-fold

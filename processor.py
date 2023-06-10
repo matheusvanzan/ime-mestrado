@@ -142,7 +142,7 @@ class Processor:
 
         return ''
 
-    def split_by_label(self):
+    def split_by_label(self): # TODO: add 'all' and 'by-label' to args
         print('split_by_label')
 
         content = pd.read_csv(self.path_data_labels)
@@ -150,7 +150,7 @@ class Processor:
         i = 1
         for id_, label in zip(content['Id'], content['Class']):
             old_path = os.path.join(self.path_data_proc, 'all', f'{id_}.asm')
-            new_path = os.path.join(self.path_data_proc, str(label), f'{id_}.asm')
+            new_path = os.path.join(self.path_data_proc, 'by-label', str(label), f'{id_}.asm')
 
             if os.path.exists(new_path):
                 print(f'{i}/{total}: skip {label}/{id_}')

@@ -46,6 +46,9 @@
                         <th data-sortable="true">Limit</th>
                         <th data-sortable="true">Epochs</th>
                         <th data-sortable="true">Fold</th>                        
+                        <th data-sortable="true">Chunk</th>                        
+                        <th data-sortable="true">Batch</th>                        
+                        <th data-sortable="true">Version</th>                        
                         <th data-sortable="true">Correct</th>
                         <th data-sortable="true">Incorrect</th>
                         <th data-sortable="true">Accuracy</th>
@@ -62,6 +65,9 @@
                         <td>
                             <span class="badge bg-primary bg-fold-{{ result.fold | lower }}">fold-{{ result.fold }}</span>
                         </td>                        
+                        <td>{{ result.chunk }}</td>
+                        <td>{{ result.batch }}</td>
+                        <td>{{ result.version }}</td>
                         <td>{{ result.good }}</td>
                         <td>{{ result.bad }}</td>
                         <td>{{ result.accuracy }}</td>
