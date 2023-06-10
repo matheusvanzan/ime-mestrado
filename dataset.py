@@ -10,15 +10,6 @@ from sys import getsizeof
 
 import settings
 
-def os_listdir(path):
-    print('os.listdir ovewrite', path)
-
-    list_dir = os.listdir(path)
-    print('  - first', list_dir[0], list_dir[1], list_dir[2])
-    print('  - last', list_dir[-3], list_dir[-2], list_dir[-1])
-
-    return list_dir
-
 def leakage_check(l1, l2, l3):
     # print('leakage_check')
     # print(len(l1), len(l2), len(l3))
@@ -261,7 +252,7 @@ class DatasetHelper:
                 print('- list_dir_path', list_dir_path)
 
             # point to ovewrite os.listdir for versioning
-            os_list_dir = os_listdir(list_dir_path)
+            os_list_dir = self._os_listdir(list_dir_path)
 
             len_10 = int(0.1 * len(os_list_dir))
             len_80 = len(os_list_dir) - 2*len_10
@@ -302,6 +293,34 @@ class DatasetHelper:
                 self.list_dir['test'][i]
             )
 
+
+    def _os_listdir(self, path):
+        '''
+            Sorting os.listdir()
+        '''
+        print('===')
+        print('os.listdir ovewrite', path)        
+
+        if int(self.version) not in [1, 2, 3]:
+            raise Exception('Version error.')
+        
+        list_dir = os.listdir(path)
+
+        if int(self.version) in [1, 2]: # os defined            
+            print('list_dir')
+            print('  - first', list_dir[0:2])
+            print('  - last', list_dir[-3:])
+            return list_dir
+
+        if int(self.version) == 3: # sorted
+            print('---')
+            list_dir_sorted = sorted(list_dir)
+            print('list_dir_sorted')
+            print('  - first', list_dir_sorted[0:2])
+            print('  - last', list_dir_sorted[-3:])
+            return list_dir_sorted
+
+        return None
 
     def _get_dataset(self, split_name):
         # tokenizer, label, path, split_name, list_dir, use_cache
