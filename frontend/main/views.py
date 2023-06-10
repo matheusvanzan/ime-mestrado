@@ -66,8 +66,7 @@ def index(request):
     epochs =  [1, 2, 3, 5, 10, 14, 15, 20] # range(21)
     folds = [str(x) for x in range(1, 10+1)] + ['k']
     k_fold = False
-
-    version = '2'
+    versions = ['2', '3']
 
     if 'model' in request.GET:
         model = request.GET['model']
@@ -80,58 +79,62 @@ def index(request):
             folds = [request.GET['fold']]
         else: # k fold
             k_fold = True
+    if 'version' in request.GET:
+        versions = [request.GET['version']]
 
     results = OrderedDict({})
     avg = 0
     for path in PATHS:
         for limit in limits:
             for epoch in epochs:
+                for version in versions:
 
-                m_kfold = {}
-                for fold in folds:
+                    m_kfold = {}
+                    for fold in folds:                   
 
-                    path_ = os.path.join(path, model)
-                    path_key = 'all.limit-{}.fold-{}.chunk-{}.epochs-{}.batch-{}.version-{}'.format(limit, fold, chunk, epoch, batch, version)
-                    key = '{}.{}.{}.{}.{}.{}.{}'.format(model, limit, fold, chunk, epoch, batch, version)
+                        path_ = os.path.join(path, model)
+                        path_key = 'all.limit-{}.fold-{}.chunk-{}.epochs-{}.batch-{}.version-{}'.format(limit, fold, chunk, epoch, batch, version)
+                        key = '{}.{}.{}.{}.{}.{}.{}'.format(model, limit, fold, chunk, epoch, batch, version)
 
-                    if key not in results:
-                        results.update({
-                            key: {
-                                'model': model,
-                                'limit': limit,
-                                'epoch': epoch,
-                                'fold': fold,
-                                'chunk': chunk,
-                                'batch': batch,
-                                'version': version,
-                            }
-                        })
-                    
-                    path_label = os.path.join(path_, path_key)
-                    path_results = os.path.join(path_label, 'results.csv')
+                        if key not in results:
+                            results.update({
+                                key: {
+                                    'model': model,
+                                    'limit': limit,
+                                    'epoch': epoch,
+                                    'fold': fold,
+                                    'chunk': chunk,
+                                    'batch': batch,
+                                    'version': version,
+                                }
+                            })
+                        
+                        path_label = os.path.join(path_, path_key)
+                        path_results = os.path.join(path_label, 'results.csv')
 
-                    # print('path', path_results)
+                        print('path', path_results)
 
-                    try:
-                        m = metrics(path_results)
-                        results[key].update(m)
+                        try:
+                            m = metrics(path_results)
+                            results[key].update(m)
 
-                        for k in m:
-                            if k not in m_kfold:
-                                m_kfold.update({ k: [] })
-                            m_kfold[k].append(m[k])
+                            for k in m:
+                                if k not in m_kfold:
+                                    m_kfold.update({ k: [] })
+                                m_kfold[k].append(m[k])
 
-                        avg += m['accuracy']
-                    except Exception as e:
-                        # print(e)
-                        pass
+                            avg += m['accuracy']
+                        except Exception as e:
+                            # print(e)
+                            m = {}
+                            avg = 0
 
-                # k-fold
-                print('K-Fold', model, limit, epoch, m_kfold)
-                m_kfold_avg = dict.fromkeys(m_kfold.keys(), 0)
-                for k in m_kfold.keys():
-                    m_kfold_avg[k] = round(sum(m_kfold[k])/len(m_kfold[k]), 2)
-                results[key].update(m_kfold_avg)
+                    # k-fold
+                    print('K-Fold', model, limit, epoch, m_kfold)
+                    m_kfold_avg = dict.fromkeys(m_kfold.keys(), 0)
+                    for k in m_kfold.keys():
+                        m_kfold_avg[k] = round(sum(m_kfold[k])/len(m_kfold[k]), 2)
+                    results[key].update(m_kfold_avg)
                     
 
     for key, value in results.items():
