@@ -33,11 +33,12 @@ from metrics import get_metrics
 def main(args):
 
     if args.process:
+        print('processing files...')
 
         proc = Processor()
         # proc.process_all_docs()
         # proc.split_by_label()
-        proc.sanity_check()
+        # proc.sanity_check()
 
     else:
 
@@ -74,6 +75,10 @@ def main(args):
         if args.fold:
             fold = int(args.fold)
 
+        version = settings.VERSION
+        if args.version:
+            version = int(args.version)
+
         print('Args: limit', limit)
         print('Args: epochs', epochs)
         print('Args: batch', batch)
@@ -82,6 +87,7 @@ def main(args):
         print('Args: model_name', model_name)
         print('Args: multi', multi)
         print('Args: fold', fold)
+        print('Args: version', version)
 
         # CACHE
         if args.cache:
@@ -107,7 +113,6 @@ def main(args):
             train_dataset = helper.get_train()
             val_dataset = helper.get_eval()
             test_dataset = helper.get_test()
-
 
         # TRAIN
         if args.train:
@@ -188,52 +193,7 @@ def main(args):
                 metric = gpt.metrics()
                 metrics.update({label_0: metric})
 
-                # r = gpt.results()
-                # results.append(r)
-
             pprint(metrics)
-
-            # columns = ['label_' + x for x in settings.DATASET_CLASSES] + ['pred', 'ref']
-            # index = []
-            # rows = []
-            # refs = {}
-
-            # with open(settings.PATH_DATA_LABELS, 'r') as f:
-            #     for line in list(f.readlines())[1:]:
-            #         line = line.replace('"', '').strip()
-            #         items = line.split(',')
-            #         refs.update({items[0]: int(items[1])-1})
-
-            # for i in range(1, len(results[0])): # file id 0..1081
-            #     file_id_0, pred_0 = results[0][i]
-            #     index.append(file_id_0)
-
-            #     row = []
-            #     for j in range(len(results)): # labels 0..8
-            #         file_id, pred = results[j][i]
-            #         row.append(pred)
-
-            #         if file_id != file_id_0:
-            #             print('error', file_id, file_id_0)
-
-            #     row.append(np.argmin(row))
-            #     row.append(refs[file_id])
-            #     rows.append(row)
-
-            # df = pd.DataFrame(rows, index=index, columns=columns)
-            # # print(df)
-            
-            # for i in range(10):
-            #     df_tmp = df[df.drop('ref', axis=1).sum(axis=1) == i]
-            #     if len(df_tmp) > 0:
-            #         print('Soma', i)
-            #         print(df_tmp)
-
-            # matrix = confusion_matrix(df['ref'], df['pred'])
-            # print(matrix)
-
-            # metrics = get_metrics(df['ref'], df['pred'])
-            # print(metrics)
         
 
 
@@ -257,15 +217,13 @@ if __name__ == '__main__':
     parser.add_argument('-ba', '--batch', dest='batch', required=False, help='Model  size')
     parser.add_argument('-la', '--label', dest='label', required=False, help='Dataset label (class)')
     parser.add_argument('-fo', '--fold', dest='fold', required=False, help='Dataset k-fold')
+    parser.add_argument('-ve', '--version', dest='version', required=False, help='System version')
 
     parser.add_argument('-pa', '--path', dest='path', required=False, help='Dataset path')
     
     
     args = parser.parse_args()
     print(args)
-
-    print(f'pid: {os.getpid()}')
-    # input('press any key to continue...')
 
     start = datetime.datetime.now()
     # pre()
