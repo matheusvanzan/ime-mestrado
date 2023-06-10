@@ -9,6 +9,12 @@ import shutil
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 
+'''
+    process files in PATH/data/kaggle/
+    and saves to PATH/data/kaggle/proc-1/
+
+'''
+
 
 class Processor:
 
@@ -21,6 +27,9 @@ class Processor:
         self.path_data_proc = settings.PATH_DATA_PROC_1
         self.vocab = settings.NPL_VOCAB
         self.max_workers = 8 # settings.MAX_WORKERS
+
+        print(f'Processing files from {self.path_data_raw}')
+        print(f'Files will be saved at {self.path_data_proc}')
 
     def filter_segment(self, content, segment='pure code'):
         '''
@@ -94,19 +103,22 @@ class Processor:
             values.append((i+1, self.docs_limit, filename))
 
         # Singleprocessor
-        # for value in values:
-        #     self.process_single_doc(value)
+        for value in values:
+            self.process_single_doc(value)
 
         # Multiprocessor
-        with ProcessPoolExecutor(max_workers = self.max_workers) as executor:
-           for i, x in enumerate(executor.map( \
-                   self.process_single_doc, values)):
-                   x # use it just to execute ProcessPoolExecutor
+        # with ProcessPoolExecutor(max_workers = self.max_workers) as executor:
+        #    for i, x in enumerate(executor.map( \
+        #            self.process_single_doc, values)):
+        #            x # use it just to execute ProcessPoolExecutor
 
     def process_single_doc(self, values):
         start = datetime.datetime.now()
 
         i, total, filename = values
+
+        if not os.path.exists(self.path_data_proc):
+            os.makedirs(self.path_data_proc)
 
         path_raw = os.path.join(self.path_data_raw, filename)
         path_proc = os.path.join(self.path_data_proc, 'all', filename)
