@@ -2,14 +2,20 @@
 # coding: utf-8
 
 import os
+import platform
 from torch import NoneType
 
 # NAMES
 PROJECT_NAME = 'project'
 
 # PATHS
-# PATH_GPT = '/content/drive/Shareddrives/GPTJ/'
-PATH_GPT = 'C:\\Users\\vanza\\Documents\\Codes\\ime\\am-malware\\'
+print(platform.system())
+if platform.system() == 'Windows':
+    PATH_GPT = 'C:\\Users\\vanza\\Documents\\Codes\\ime\\am-malware\\'
+elif platform.system() == 'Linux':
+    PATH_GPT = '/home/utilizador/codes/'
+else:
+    raise Exception('Paths not configured in settings.py')
 
 PATH_PROJECT = os.path.join(PATH_GPT, 'project')
 PATH_DATA = os.path.join(PATH_GPT, 'data')
@@ -73,6 +79,7 @@ GPT_TRAIN_CHUNK_SIZE = DATASET_CHUNK_SIZE
 GPT_TEST_CHUNK_SIZE = DATASET_CHUNK_SIZE
 GPT_BATCH_SIZE = 160
 GPT_EPOCHS = 2
+VERSION = 1
 
 
 
