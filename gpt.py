@@ -174,7 +174,7 @@ class GPT:
 
             # save for continuig training
             save_strategy = 'steps',
-            save_steps = 10000,                      
+            save_steps = 100000,                      
                                            
             per_device_train_batch_size = self.batch_size,
             per_device_eval_batch_size = self.batch_size,
