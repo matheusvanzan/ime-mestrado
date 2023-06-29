@@ -37,7 +37,7 @@ def main(args):
 
         proc = Processor()
         # proc.process_all_docs()
-        # proc.split_by_label()
+        proc.split_by_label()
         # proc.sanity_check()
 
     else:
