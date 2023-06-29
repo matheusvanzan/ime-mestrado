@@ -4,6 +4,7 @@
 
 import os
 import evaluate
+import platform
 
 from statistics import mean
 from webbrowser import get
@@ -79,6 +80,10 @@ class GPT:
         self.path_results = os.path.join(path_label, 'results.csv')
         self.path_train_metrics = os.path.join(path_label, 'train-metrics.json')
 
+        self.path_host = os.path.join(path_label, 'host.txt')
+        with open(self.path_host, 'w+') as f:
+            f.write(f'{platform.system()}\n{platform.node()}\n')
+
         self.model = None
         self.tokenizer = self._get_tokenizer()
 
@@ -96,6 +101,7 @@ class GPT:
         for path in paths:
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
+
 
     def _get_tokenizer(self):
 
