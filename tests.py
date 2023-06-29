@@ -22,6 +22,16 @@ def test_settings():
     print('PATH_PROJECT', PATH_PROJECT)
     print('PATH_DATA', PATH_DATA)
 
+def test_os():
+    import platform
+    import os
+
+    print('platform.architecture', platform.architecture())
+    print('platform.machine', platform.machine())
+    print('platform.node', platform.node())
+    print('platform.system', platform.system())
+    print('os.uname', os.uname())
+
 
 
 if __name__ == '__main__':
