@@ -117,11 +117,12 @@ class Processor:
 
         i, total, filename = values
 
-        if not os.path.exists(self.path_data_proc):
-            os.makedirs(self.path_data_proc)
+        path_proc_dir = os.path.join(self.path_data_proc, 'all')
+        if not os.path.exists(path_proc_dir):
+            os.makedirs(path_proc_dir)
 
         path_raw = os.path.join(self.path_data_raw, filename)
-        path_proc = os.path.join(self.path_data_proc, 'all', filename)
+        path_proc = os.path.join(path_proc_dir, filename)
         
         if os.path.exists(path_proc):
             print(f'{i}/{total}: skip {filename}')
@@ -150,7 +151,11 @@ class Processor:
         i = 1
         for id_, label in zip(content['Id'], content['Class']):
             old_path = os.path.join(self.path_data_proc, 'all', f'{id_}.asm')
-            new_path = os.path.join(self.path_data_proc, 'by-label', str(label), f'{id_}.asm')
+
+            new_path_dir = os.path.join(self.path_data_proc, 'by-label', str(label-1))
+            if not os.path.exists(new_path_dir):
+                os.makedirs(new_path_dir)
+            new_path = os.path.join(new_path_dir, f'{id_}.asm')
 
             if os.path.exists(new_path):
                 print(f'{i}/{total}: skip {label}/{id_}')
@@ -168,7 +173,7 @@ class Processor:
         total = len(content)
         i = 1
         for id_, label in zip(content['Id'], content['Class']):
-            new_path = os.path.join(self.path_data_proc, str(label), f'{id_}.asm')
+            new_path = os.path.join(self.path_data_proc, 'by-label', str(label-1), f'{id_}.asm')
 
             with open(new_path, 'r', encoding='utf-8') as f:
                 content = f.read()
