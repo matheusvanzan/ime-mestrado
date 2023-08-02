@@ -233,8 +233,12 @@ class DatasetHelper:
         self.path = path # proc-1
         self.limit = limit
         self.fold = fold
-        self.version = version
         self.use_cache = use_cache
+
+        if version in [1, 2]:
+            self.version = version
+        else:
+            self.version = 3
         
         self.list_dir = {
             'train': [None]*len(labels),
@@ -257,7 +261,7 @@ class DatasetHelper:
             len_10 = int(0.1 * len(os_list_dir))
             len_80 = len(os_list_dir) - 2*len_10
 
-            # print('NO K-FOLD')
+            # print('NO K-FOLD')    
             # self.list_dir['train'][i], \
             # self.list_dir['eval'][i], \
             # self.list_dir['test'][i] = random_split(os_list_dir, [len_80, len_10, len_10])
@@ -299,20 +303,17 @@ class DatasetHelper:
             Sorting os.listdir()
         '''
         print('===')
-        print('os.listdir ovewrite', path)        
-
-        if int(self.version) not in [1, 2, 3]:
-            raise Exception('Version error.')
+        print('os.listdir ovewrite', path)
         
         list_dir = os.listdir(path)
 
-        if int(self.version) in [1, 2]: # os defined            
+        if int(self.version) in [1, 2]: # os defined (old)
             print('list_dir')
             print('  - first', list_dir[0:2])
             print('  - last', list_dir[-3:])
             return list_dir
 
-        if int(self.version) == 3: # sorted
+        if int(self.version) >= 3: # sorted
             print('---')
             list_dir_sorted = sorted(list_dir)
             print('list_dir_sorted')

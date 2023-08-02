@@ -186,7 +186,7 @@ class GPT:
             per_device_eval_batch_size = self.batch_size,
 
             warmup_steps = 0,
-            weight_decay = 0.01,
+            weight_decay = 0, # .01,
 
             # earlystopping
             evaluation_strategy = 'steps' if self.early_stop else 'no',
@@ -296,11 +296,17 @@ class GPT:
         print(' - BAD:', bad)
 
         msg = 'MalGPT - Test metrics\n'
-        msg += '---------------\n'
-        msg += '{} epochs\n'.format(self.epochs)
-        msg += 'Acc {}\n'.format(round(100*good/(bad+good), 4))
-        msg += 'Good {}\n'.format(good)
-        msg += 'Bad {}\n'.format(bad)
+        msg += '------\n'
+        msg += 'Fold: {} \n'.format(self.fold)
+        msg += 'Limit: {} \n'.format(self.limit)
+        msg += 'Chunk: {} \n'.format(self.chunk_size)
+        msg += 'Batch: {} \n'.format(self.batch_size)
+        msg += 'Model: {} \n'.format(self.model_name)
+        msg += 'Epochs: {} \n'.format(self.epochs)
+        msg += 'Version: {} \n'.format(self.version)
+
+        msg += 'Good/Bad: {}/{}\n'.format(good, bad)
+        msg += 'Acc: {}%\n'.format(round(100*good/(bad+good), 2))
         whats.send(msg)
 
         m = {}
