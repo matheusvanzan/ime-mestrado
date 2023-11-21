@@ -1,0 +1,10 @@
+paths:
+  - windows:
+    gpt:     'D:/IME/gpt-malware/'
+    project: 'D:/IME/gpt-malware/project'
+    data:    'D:/IME/gpt-malware/data'
+  - linux:
+    gpt:     '/home/utilizador/codes/'
+    project: '/home/utilizador/codes/project'
+    data:    '/home/utilizador/codes/data'
+  

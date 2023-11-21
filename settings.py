@@ -12,7 +12,8 @@ PROJECT_NAME = 'project'
 print(platform.system())
 
 if platform.system() == 'Windows':
-    PATH_GPT = 'C:\\Users\\vanza\\Documents\\Codes\\ime\\am-malware\\'
+    # PATH_GPT = 'C:\\Users\\vanza\\Documents\\Codes\\ime\\am-malware\\'
+    PATH_GPT = 'D:\\IME\\gpt-malware\\'
     VERSION = 1
 elif platform.system() == 'Linux':
     PATH_GPT = '/home/utilizador/codes/'
@@ -74,12 +75,12 @@ NPL_VOCAB = set(OPCODES.split(','))
 # DATASET
 DATASET_CLASSES = [str(i) for i in range(9)]
 DATASET_CHUNK_SIZE = 32 # size per line in .csv
-DATASET_LIMIT = 1024 # number of tokens
+DATASET_LIMIT = 'all' # number of tokens
 
 # GPT
 MODEL_NAME = 'gpt2'
 GPT_TRAIN_CHUNK_SIZE = DATASET_CHUNK_SIZE
 GPT_TEST_CHUNK_SIZE = DATASET_CHUNK_SIZE
 GPT_BATCH_SIZE = 160
-GPT_EPOCHS = 2
+GPT_EPOCHS = 1
 
