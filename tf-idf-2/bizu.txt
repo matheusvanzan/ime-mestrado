@@ -1,0 +1,8 @@
+https://scholar.google.com.br/citations?view_op=view_citation&hl=en&user=IpWDGLkAAAAJ&sortby=pubdate&citation_for_view=IpWDGLkAAAAJ:dhFuZR0502QC
+
+
+root@d0c73c19d467:/home/docky/code# python2 --version
+Python 2.7.18
+root@d0c73c19d467:/home/docky/code# python3 --version
+Python 3.8.10
+

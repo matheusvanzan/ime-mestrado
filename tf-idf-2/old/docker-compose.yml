@@ -1,0 +1,29 @@
+version: '3.3'
+
+services:
+  project:
+    container_name: project
+    image: project
+    build: 
+        dockerfile: ./project/docker/project.dockerfile
+        context: .
+    working_dir: /home/docky/
+    volumes:
+        - ./project/code:/home/docky/code
+        - /Volumes/OneTouch/data:/home/docky/data
+    command: "tail -F /dev/null"
+
+  jupyter:
+    container_name: jupyter
+    image: jupyter
+    build: 
+        dockerfile: ./project/docker/jupyter.dockerfile
+        context: .
+    ports: 
+      - "8888:8888"
+    environment: 
+      - JUPYTER_ENABLE_LAB=yes
+    volumes: 
+      - ./project/code:/home/jovyan/code
+      - /Volumes/OneTouch/data:/home/jovyan/data
+    command: "start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''"

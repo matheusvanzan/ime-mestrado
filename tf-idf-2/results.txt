@@ -1,0 +1,252 @@
+
+--- v1
+
+
+1, 10
+fold: 1, m-acc: 95.99%, loss: 0.13
+fold: 2, m-acc: 56.56%, loss: 2.73
+fold: 3, m-acc: 57.75%, loss: 2.55
+fold: 4, m-acc: 96.15%, loss: 0.18
+fold: 5, m-acc: 91.6%, loss: 0.29
+fold: 6, m-acc: 55.55%, loss: 2.59
+fold: 7, m-acc: 96.71%, loss: 0.13
+fold: 8, m-acc: 96.84%, loss: 0.12
+fold: 9, m-acc: 96.33%, loss: 0.17
+fold: 10, m-acc: 96.35%, loss: 0.14
+10-fold-acc: 83.98%
+
+1, 100
+fold: 1, m-acc: 15.2%, loss: 6.13
+fold: 2, m-acc: 92.94%, loss: 0.32
+fold: 3, m-acc: 98.87%, loss: 0.06
+fold: 4, m-acc: 16.07%, loss: 5.06
+fold: 5, m-acc: 29.38%, loss: 4.13
+fold: 6, m-acc: 11.93%, loss: 6.41
+fold: 7, m-acc: 11.23%, loss: 6.3
+fold: 8, m-acc: 98.92%, loss: 0.03
+fold: 9, m-acc: 15.26%, loss: 7.57
+fold: 10, m-acc: 88.48%, loss: 0.42
+10-fold-acc: 47.83%
+
+2, 10
+fold: 1, m-acc: 97.97%, loss: 0.08
+fold: 2, m-acc: 40.47%, loss: 5.59
+fold: 3, m-acc: 85.42%, loss: 0.9
+fold: 4, m-acc: 14.37%, loss: 9.15
+fold: 5, m-acc: 97.42%, loss: 0.12
+fold: 6, m-acc: 92.02%, loss: 0.27
+fold: 7, m-acc: 84.94%, loss: 1.01
+fold: 8, m-acc: 97.01%, loss: 0.11
+fold: 9, m-acc: 85.11%, loss: 0.92
+fold: 10, m-acc: 96.96%, loss: 0.11
+10-fold-acc: 79.17%
+
+
+2, 100
+fold: 1, m-acc: 27.4%, loss: 4.55
+fold: 2, m-acc: 23.57%, loss: 9.55
+fold: 3, m-acc: 53.15%, loss: 2.46
+fold: 4, m-acc: 26.31%, loss: 6.95
+fold: 5, m-acc: 27.6%, loss: 7.2
+fold: 6, m-acc: 27.13%, loss: 8.54
+fold: 7, m-acc: 29.38%, loss: 5.82
+fold: 8, m-acc: 60.71%, loss: 2.25
+fold: 9, m-acc: 22.71%, loss: 6.57
+fold: 10, m-acc: 22.45%, loss: 7.77
+10-fold-acc: 32.04%
+
+1, 10 e 2, 10
+fold: 1, m-acc: 98.21%, loss: 0.05
+fold: 2, m-acc: 69.95%, loss: 1.06
+fold: 3, m-acc: 78.96%, loss: 0.69
+fold: 4, m-acc: 69.96%, loss: 1.08
+fold: 5, m-acc: 97.56%, loss: 0.1
+fold: 6, m-acc: 78.43%, loss: 0.64
+fold: 7, m-acc: 97.31%, loss: 0.1
+fold: 8, m-acc: 97.89%, loss: 0.07
+fold: 9, m-acc: 96.61%, loss: 0.14
+fold: 10, m-acc: 98.58%, loss: 0.07
+10-fold-acc: 88.35%
+
+
+1, 100 e 2, 100
+fold: 1, m-acc: 26.95%, loss: 5.18
+fold: 2, m-acc: 30.39%, loss: 6.04
+fold: 3, m-acc: 77.89%, loss: 1.07
+fold: 4, m-acc: 26.08%, loss: 6.85
+fold: 5, m-acc: 28.71%, loss: 6.68
+fold: 6, m-acc: 26.88%, loss: 7.54
+fold: 7, m-acc: 37.6%, loss: 4.57
+fold: 8, m-acc: 77.38%, loss: 0.88
+fold: 9, m-acc: 25.21%, loss: 5.7
+fold: 10, m-acc: 33.55%, loss: 4.83
+10-fold-acc: 39.06%
+
+
+(1, 20) e (2, 20)
+fold: 1, m-acc: 88.98%, loss: 0.39
+fold: 2, m-acc: 98.01%, loss: 0.09
+fold: 3, m-acc: 98.73%, loss: 0.05
+fold: 4, m-acc: 98.6%, loss: 0.05
+fold: 5, m-acc: 98.68%, loss: 0.07
+fold: 6, m-acc: 40.32%, loss: 4.25
+fold: 7, m-acc: 93.59%, loss: 0.24
+fold: 8, m-acc: 98.74%, loss: 0.04
+fold: 9, m-acc: 43.48%, loss: 3.27
+fold: 10, m-acc: 90.37%, loss: 0.36
+10-fold-acc: 84.95%
+
+
+----- v2
+
+(1, 0.5, 10)
+fold: 1, m-acc: 93.0%, loss: 0.28
+fold: 2, m-acc: 93.37%, loss: 0.26
+fold: 3, m-acc: 90.88%, loss: 0.3
+fold: 4, m-acc: 92.73%, loss: 0.25
+fold: 5, m-acc: 93.09%, loss: 0.27
+fold: 6, m-acc: 92.91%, loss: 0.27
+fold: 7, m-acc: 93.0%, loss: 0.24
+fold: 8, m-acc: 91.8%, loss: 0.27
+fold: 9, m-acc: 92.17%, loss: 0.27
+fold: 10, m-acc: 90.69%, loss: 0.35
+10-fold-acc: 92.36%
+
+(1, 0.5, 20)
+fold: 1, m-acc: 20.98%, loss: 6.52
+fold: 2, m-acc: 87.03%, loss: 0.63
+fold: 3, m-acc: 73.87%, loss: 0.83
+fold: 4, m-acc: 84.36%, loss: 0.65
+fold: 5, m-acc: 9.66%, loss: 10.09
+fold: 6, m-acc: 85.56%, loss: 0.65
+fold: 7, m-acc: 70.19%, loss: 1.43
+fold: 8, m-acc: 81.23%, loss: 1.11
+fold: 9, m-acc: 87.11%, loss: 0.49
+fold: 10, m-acc: 79.47%, loss: 0.69
+10-fold-acc: 67.95%
+
+(2, 0.2, 10),
+fold: 1, m-acc: 89.78%, loss: 0.32
+fold: 2, m-acc: 20.35%, loss: 4.77
+fold: 3, m-acc: 15.47%, loss: 4.65
+fold: 4, m-acc: 90.7%, loss: 0.32
+fold: 5, m-acc: 89.13%, loss: 0.32
+fold: 6, m-acc: 90.98%, loss: 0.36
+fold: 7, m-acc: 92.82%, loss: 0.26
+fold: 8, m-acc: 88.21%, loss: 0.38
+fold: 9, m-acc: 90.41%, loss: 0.28
+fold: 10, m-acc: 13.09%, loss: 6.27
+10-fold-acc: 68.09%
+
+(2, 0.2, 20)
+fold: 1, m-acc: 94.48%, loss: 0.22
+fold: 2, m-acc: 93.28%, loss: 0.2
+fold: 3, m-acc: 93.65%, loss: 0.25
+fold: 4, m-acc: 29.62%, loss: 6.34
+fold: 5, m-acc: 81.6%, loss: 0.53
+fold: 6, m-acc: 30.36%, loss: 6.33
+fold: 7, m-acc: 93.47%, loss: 0.19
+fold: 8, m-acc: 92.36%, loss: 0.28
+fold: 9, m-acc: 95.58%, loss: 0.17
+fold: 10, m-acc: 92.63%, loss: 0.23
+10-fold-acc: 79.7%
+
+(1, 0.5, 10), (2, 0.2, 10)
+fold: 1, m-acc: 96.13%, loss: 0.15
+fold: 2, m-acc: 45.03%, loss: 2.46
+fold: 3, m-acc: 43.19%, loss: 2.98
+fold: 4, m-acc: 96.5%, loss: 0.13
+fold: 5, m-acc: 96.22%, loss: 0.16
+fold: 6, m-acc: 95.12%, loss: 0.18
+fold: 7, m-acc: 97.05%, loss: 0.09
+fold: 8, m-acc: 96.78%, loss: 0.14
+fold: 9, m-acc: 96.04%, loss: 0.13
+fold: 10, m-acc: 47.0%, loss: 1.88
+10-fold-acc: 80.91%
+
+
+----- v3
+
+(1, 0, 10)
+fold: 1, m-acc: 92.0%, loss: 0.31
+fold: 2, m-acc: 93.56%, loss: 0.27
+fold: 3, m-acc: 92.27%, loss: 0.29
+fold: 4, m-acc: 91.72%, loss: 0.29
+fold: 5, m-acc: 91.44%, loss: 0.31
+fold: 6, m-acc: 92.46%, loss: 0.25
+fold: 7, m-acc: 92.09%, loss: 0.27
+fold: 8, m-acc: 91.44%, loss: 0.31
+fold: 9, m-acc: 90.33%, loss: 0.32
+fold: 10, m-acc: 91.9%, loss: 0.32
+10-fold-acc: 91.92%
+
+(2, 0, 10)
+fold: 1, m-acc: 26.86%, loss: 3.0
+fold: 2, m-acc: 20.52%, loss: 6.09
+fold: 3, m-acc: 36.98%, loss: 4.18
+fold: 4, m-acc: 92.73%, loss: 0.27
+fold: 5, m-acc: 84.27%, loss: 0.52
+fold: 6, m-acc: 78.01%, loss: 0.63
+fold: 7, m-acc: 92.64%, loss: 0.26
+fold: 8, m-acc: 90.71%, loss: 0.36
+fold: 9, m-acc: 44.38%, loss: 3.02
+fold: 10, m-acc: 93.65%, loss: 0.26
+10-fold-acc: 66.08%
+0:03:49
+
+(3, 0, 10)
+fold: 1, m-acc: 37.53%, loss: 4.96
+fold: 2, m-acc: 24.66%, loss: 3.4
+fold: 3, m-acc: 92.92%, loss: 0.27
+fold: 4, m-acc: 73.6%, loss: 0.88
+fold: 5, m-acc: 32.29%, loss: 4.48
+fold: 6, m-acc: 33.03%, loss: 5.3
+fold: 7, m-acc: 30.91%, loss: 4.87
+fold: 8, m-acc: 91.26%, loss: 0.3
+fold: 9, m-acc: 93.09%, loss: 0.25
+fold: 10, m-acc: 80.39%, loss: 0.58
+10-fold-acc: 58.97%
+
+(1, 0, 10), (2, 0, 10)
+fold: 1, m-acc: 36.34%, loss: 3.12
+fold: 2, m-acc: 20.52%, loss: 5.14
+fold: 3, m-acc: 36.89%, loss: 4.03
+fold: 4, m-acc: 92.92%, loss: 0.24
+fold: 5, m-acc: 85.28%, loss: 0.54
+fold: 6, m-acc: 90.34%, loss: 0.36
+fold: 7, m-acc: 93.65%, loss: 0.25
+fold: 8, m-acc: 92.18%, loss: 0.28
+fold: 9, m-acc: 35.91%, loss: 2.79
+fold: 10, m-acc: 93.55%, loss: 0.28
+10-fold-acc: 67.76%
+
+0,25
+class                    
+0      0.884925  0.381386
+1      0.966231  0.134075
+2      0.995581  0.015780
+3      0.943159  0.294502
+4      0.476667  1.891836
+5      0.954667  0.240770
+6      0.945406  0.297581
+7      0.884897  0.358325
+8      0.936808  0.227909
+all    0.946265  0.198231
+
+
+-- Media de cada fold
+                 acc      loss
+fold class                    
+1    all    0.945109  0.195603
+2    all    0.952469  0.190844
+3    all    0.928550  0.238525
+4    all    0.945109  0.200534
+5    all    0.943269  0.207046
+6    all    0.953695  0.177208
+7    all    0.950629  0.180146
+8    all    0.941429  0.204797
+9    all    0.951811  0.181628
+10   all    0.950583  0.205976
+            acc      loss
+
+            
