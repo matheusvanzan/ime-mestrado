@@ -53,7 +53,7 @@ def custom_one_hot_encoder(n, total):
 
 class DirectoryDataset(Dataset):
 
-    def __init__(self, tokenizer, label, label_0, path, split_name, list_dir, limit, fold, version, use_cache):
+    def __init__(self, tokenizer, label, label_0, path, split_name, list_dir, limit, fold, chunk, version, use_cache):
 
         self.verbose = False
 
@@ -69,7 +69,7 @@ class DirectoryDataset(Dataset):
 
         self.use_cache = use_cache
 
-        self.chunk_size = settings.DATASET_CHUNK_SIZE
+        self.chunk = chunk
         self.chunks = []
 
         # multiclass
@@ -93,7 +93,7 @@ class DirectoryDataset(Dataset):
             os.makedirs(path_csv_parent)        
         
         # file name
-        self.path_csv = os.path.join(path_csv_parent, f'{label}.limit-{self.limit}.fold-{self.fold}.chunk-{self.chunk_size}.version-{self.version}.{self.split_name}.csv')
+        self.path_csv = os.path.join(path_csv_parent, f'{label}.limit-{self.limit}.fold-{self.fold}.chunk-{self.chunk}.version-{self.version}.{self.split_name}.csv')
 
         self._create_csv() # if not in file already
         self._create_input_ids()
@@ -129,13 +129,13 @@ class DirectoryDataset(Dataset):
 
         input_id_chunks = get_chunks(
             list_ = input_ids, # start_token['input_ids'] + input_ids + end_token['input_ids'],
-            window = self.chunk_size, 
+            window = self.chunk, 
             fill = pad_token['input_ids'][0]
         )
 
         mask_chunks = get_chunks(
             list_ = attention_mask, # start_token['attention_mask'] + attention_mask + end_token['attention_mask'],
-            window = self.chunk_size, 
+            window = self.chunk, 
             fill = pad_token['attention_mask'][0]
         )
 
@@ -215,15 +215,15 @@ class DirectoryDataset(Dataset):
         file_id = chunk_list[0]
         chunk_int = [int(x) for x in chunk_list[1:]]
 
-        input_ids = torch.tensor( chunk_int[:self.chunk_size] )
-        attn_mask = torch.tensor( chunk_int[self.chunk_size:] )
+        input_ids = torch.tensor( chunk_int[:self.chunk] )
+        attn_mask = torch.tensor( chunk_int[self.chunk:] )
         
         return file_id, input_ids, attn_mask, self.label_id
 
 
 class DatasetHelper:
 
-    def __init__(self, tokenizer, labels, label_0, path, limit, fold, version, use_cache=True):
+    def __init__(self, tokenizer, labels, label_0, path, limit, fold, chunk, version, use_cache=True):
 
         self.verbose = False
 
@@ -233,6 +233,7 @@ class DatasetHelper:
         self.path = path # proc-1
         self.limit = limit
         self.fold = fold
+        self.chunk = chunk
         self.use_cache = use_cache
 
         if version in [1, 2]:
@@ -337,6 +338,7 @@ class DatasetHelper:
                 list_dir = self.list_dir[split_name][i],
                 limit = self.limit,
                 fold = self.fold,
+                chunk = self.chunk,
                 version = self.version,
                 use_cache = self.use_cache
             )

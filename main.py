@@ -37,8 +37,8 @@ def main(args):
 
         proc = Processor()
         # proc.process_all_docs()
-        proc.split_by_label()
-        # proc.sanity_check()
+        # proc.split_by_label()
+        proc.sanity_check()
 
     else:
 
@@ -75,9 +75,15 @@ def main(args):
         if args.fold:
             fold = int(args.fold)
 
+        chunk = settings.DATASET_CHUNK_SIZE
+        if args.chunk:
+            chunk = int(args.chunk)
+
         version = settings.VERSION
         if args.version:
             version = int(args.version)
+
+        print('Settings: PATH_DATA', settings.PATH_DATA)
 
         print('Args: limit', limit)
         print('Args: epochs', epochs)
@@ -87,7 +93,10 @@ def main(args):
         print('Args: model_name', model_name)
         print('Args: multi', multi)
         print('Args: fold', fold)
+        print('Args: chunk', chunk)
         print('Args: version', version)
+
+        # input('Press Enter to continue...')
 
         # CACHE
         if args.cache:
@@ -95,7 +104,8 @@ def main(args):
                 model_name=model_name, 
                 model_label=labels[0], 
                 limit=limit,
-                fold = fold,
+                fold=fold,
+                chunk=chunk,
                 epochs=epochs, 
                 batch=batch,
                 version=version
@@ -108,6 +118,7 @@ def main(args):
                 path = path, 
                 limit = limit,
                 fold = fold,
+                chunk = chunk,
                 version = version,
                 use_cache = True
             )
@@ -126,7 +137,8 @@ def main(args):
                     model_name=model_name, 
                     model_label=label_0, 
                     limit=limit,
-                    fold = fold,
+                    fold=fold,
+                    chunk=chunk,
                     epochs=epochs,
                     batch=batch,
                     version=version
@@ -140,6 +152,7 @@ def main(args):
                         path = path, 
                         limit = limit,
                         fold = fold,
+                        chunk = chunk,
                         version = version,
                         use_cache = True
                     )
@@ -161,6 +174,7 @@ def main(args):
                     model_label=label_0, 
                     limit=limit,
                     fold=fold,
+                    chunk=chunk,
                     epochs=epochs,
                     batch=batch,
                     version=version
@@ -173,6 +187,7 @@ def main(args):
                     path = path, 
                     limit = limit,
                     fold = fold,
+                    chunk = chunk,
                     version = version,
                     use_cache = True
                 )
@@ -193,6 +208,7 @@ def main(args):
                     model_label=label_0,
                     limit=limit,
                     fold=fold,
+                    chunk=chunk,
                     epochs=epochs,
                     batch=batch,
                     version=version
@@ -224,6 +240,7 @@ if __name__ == '__main__':
     parser.add_argument('-ba', '--batch', dest='batch', required=False, help='Model  size')
     parser.add_argument('-la', '--label', dest='label', required=False, help='Dataset label (class)')
     parser.add_argument('-fo', '--fold', dest='fold', required=False, help='Dataset k-fold')
+    parser.add_argument('-ch', '--chunk', dest='chunk', required=False, help='Dataset chunk')
     parser.add_argument('-ve', '--version', dest='version', required=False, help='System version')
 
     parser.add_argument('-pa', '--path', dest='path', required=False, help='Dataset path')

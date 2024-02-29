@@ -30,6 +30,10 @@ Cria o virtualenv e instala todas as dependências.
 - Tokenização dos arquivos de .asm para .csv de tokens
 - Criação do banco com os aparametros default
 
+Versões
+1 - Ordem do Linux Google Colab
+2 - Ordem do Windows
+3 - Arquivos ordenados ASC
 
 # Linux
 sudo apt-get install libmkl-avx

@@ -31,7 +31,7 @@ class Processor:
         print(f'Processing files from {self.path_data_raw}')
         print(f'Files will be saved at {self.path_data_proc}')
 
-    def filter_segment(self, content, segment='pure code'):
+    def filter_segment(self, content, segment='pure code'):      
         '''
             CODE    -       Pure code   <-------- what we want
             DATA    -       Pure data
@@ -84,7 +84,8 @@ class Processor:
         content = ' '.join(content.split())
 
         # keep only code segment
-        content = self.filter_segment(content)
+        if 'big2015' in settings.PATH_DATA:
+            content = self.filter_segment(content)
 
         # only vocab
         if len(self.vocab) != 0:

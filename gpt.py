@@ -32,18 +32,17 @@ from dataset import DirectoryDataset
 
 class GPT:
 
-    def __init__(self, model_name, model_label, limit, fold, epochs, batch, version):
+    def __init__(self, model_name, model_label, limit, fold, chunk, epochs, batch, version):
         print(f'Model: name {model_name}')
         print(f"Model: label '{model_label}'")
 
-        self.early_stop = False
-
-        self.chunk_size = settings.GPT_TRAIN_CHUNK_SIZE
+        self.early_stop = False        
 
         self.model_name = model_name
         self.model_label = model_label
         self.limit = limit
         self.fold = fold
+        self.chunk = chunk
         self.epochs = epochs
         self.batch_size = batch
         self.version = version
@@ -61,7 +60,7 @@ class GPT:
             self.model_label,
             self.limit,
             self.fold,
-            self.chunk_size,
+            self.chunk,
             self.epochs,
             self.batch_size,
             self.version
@@ -299,7 +298,7 @@ class GPT:
         msg += '------\n'
         msg += 'Fold: {} \n'.format(self.fold)
         msg += 'Limit: {} \n'.format(self.limit)
-        msg += 'Chunk: {} \n'.format(self.chunk_size)
+        msg += 'Chunk: {} \n'.format(self.chunk)
         msg += 'Batch: {} \n'.format(self.batch_size)
         msg += 'Model: {} \n'.format(self.model_name)
         msg += 'Epochs: {} \n'.format(self.epochs)

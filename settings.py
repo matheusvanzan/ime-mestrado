@@ -22,17 +22,25 @@ else:
     raise Exception('Paths not configured in settings.py')
 
 PATH_PROJECT = os.path.join(PATH_GPT, 'project')
-PATH_DATA = os.path.join(PATH_GPT, 'data')
 
-PATH_DATA_KAGGLE = os.path.join(PATH_DATA, 'kaggle')
-PATH_DATA_LABELS = os.path.join(PATH_DATA_KAGGLE, 'trainLabels.csv')
+# PATH_DATA = os.path.join(PATH_GPT, 'data-big2015')
+# DATASET_CLASSES = [str(i) for i in range(9)]
+
+PATH_DATA = os.path.join(PATH_GPT, 'data-malv2022')
+DATASET_CLASSES = ['0', '1']
+
+NN_LEN_CLASSES = len(DATASET_CLASSES)
+NN_KFOLD = 10
+NN_EPOCHS = 20
+NN_BATCH = 32
+NN_MEAN_TRIALS = 1
+
+PATH_DATA_KAGGLE = os.path.join(PATH_DATA, 'dataset')
+PATH_DATA_LABELS = os.path.join(PATH_DATA_KAGGLE, 'labels.csv')
+PATH_DATA_LABELS_0 = os.path.join(PATH_DATA_KAGGLE, 'labels-0.csv')
 PATH_DATA_ASM = os.path.join(PATH_DATA_KAGGLE, 'asm')
-
 PATH_DATA_PROC_1 = os.path.join(PATH_DATA_KAGGLE, 'proc-1')
-PATH_DATA_PROC_2 = os.path.join(PATH_DATA_KAGGLE, 'proc-2')
-PATH_DATA_PROC_3 = os.path.join(PATH_DATA_KAGGLE, 'proc-3')
-PATH_DATA_PROC_4 = os.path.join(PATH_DATA_KAGGLE, 'proc-4')
-PATH_DATA_PROC_5 = os.path.join(PATH_DATA_KAGGLE, 'proc-5')
+PATH_DATA_TFIDF = os.path.join(PATH_DATA, 'tf-idf')
 
 # NPL
 NPL_CHARS_TO_REMOVE = ''.join([
@@ -73,7 +81,6 @@ NPL_VOCAB = set(OPCODES.split(','))
 
 
 # DATASET
-DATASET_CLASSES = [str(i) for i in range(9)]
 DATASET_CHUNK_SIZE = 32 # size per line in .csv
 DATASET_LIMIT = 'all' # number of tokens
 
